@@ -31,14 +31,34 @@ export default async function SearchPage({
   const q = resolvedParams.q || "";
   const db = getDb();
 
+  // Check if FTS5 tables exist
+  let hasFts = false;
+  try {
+    db.prepare("SELECT 1 FROM search_legislation LIMIT 1").get();
+    hasFts = true;
+  } catch { }
+
+  // Sanitize FTS query: remove special chars, add * for prefix matching
+  const ftsQuery = q.replace(/[^a-zA-Z0-9\s]/g, '').split(/\s+/).filter(Boolean).map(w => `"${w}"*`).join(' ');
+
   // ── Entity search ────────────────────────────────────────────────
   let entities: Entity[] = [];
   if (q) {
-    entities = db.prepare(`
-      SELECT * FROM entities 
-      WHERE name LIKE ? OR type LIKE ? OR slug LIKE ? OR lean LIKE ? OR description LIKE ?
-      ORDER BY name
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`) as Entity[];
+    if (hasFts) {
+      try {
+        entities = db.prepare(`
+          SELECT e.* FROM entities e
+          INNER JOIN search_entities se ON e.rowid = se.rowid
+          WHERE search_entities MATCH ?
+          ORDER BY se.rank
+          LIMIT 20
+        `).all(ftsQuery) as Entity[];
+      } catch {
+        entities = db.prepare(`SELECT * FROM entities WHERE name LIKE ? ORDER BY name`).all(`%${q}%`) as Entity[];
+      }
+    } else {
+      entities = db.prepare(`SELECT * FROM entities WHERE name LIKE ? OR type LIKE ? OR slug LIKE ? ORDER BY name`).all(`%${q}%`, `%${q}%`, `%${q}%`) as Entity[];
+    }
   }
 
   // ── Donor search ─────────────────────────────────────────────────
@@ -54,15 +74,24 @@ export default async function SearchPage({
     `).all(`%${q}%`, `%${q}%`, `%${q}%`) as any[];
   }
 
-  // ── Legislation search ───────────────────────────────────────────
+  // ── Legislation search (FTS5 powered) ─────────────────────────────
   let legislation: any[] = [];
   if (q) {
-    legislation = db.prepare(`
-      SELECT * FROM legislation
-      WHERE title LIKE ? OR bill_id LIKE ? OR summary LIKE ? OR status LIKE ?
-      ORDER BY introduced_date DESC
-      LIMIT 20
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`, `%${q}%`) as any[];
+    if (hasFts) {
+      try {
+        legislation = db.prepare(`
+          SELECT l.* FROM legislation l
+          INNER JOIN search_legislation sl ON l.rowid = sl.rowid
+          WHERE search_legislation MATCH ?
+          ORDER BY sl.rank
+          LIMIT 30
+        `).all(ftsQuery) as any[];
+      } catch {
+        legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as any[];
+      }
+    } else {
+      legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as any[];
+    }
   }
 
   // ── Policy Paper search ──────────────────────────────────────────
