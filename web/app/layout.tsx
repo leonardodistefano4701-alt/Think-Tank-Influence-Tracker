@@ -31,6 +31,7 @@ export default function RootLayout({
                 <Link href="/donors" className="text-sm text-muted hover:text-white transition-colors">Donors</Link>
                 <Link href="/explore" className="text-sm text-muted hover:text-white transition-colors">Explore</Link>
                 <Link href="/compare" className="text-sm text-muted hover:text-white transition-colors">Compare</Link>
+                <Link href="/analysis" className="text-sm text-muted hover:text-white transition-colors font-semibold text-primary">Analysis</Link>
               </div>
             </div>
           </div>
