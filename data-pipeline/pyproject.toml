@@ -1,0 +1,16 @@
+[project]
+name = "data-pipeline"
+version = "0.1.0"
+description = "TTIT Data Pipeline"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "httpx",
+    "pydantic",
+    "structlog",
+    "supabase",
+    "python-dotenv",
+    "pytest",
+    "pytest-asyncio",
+    "openpyxl"
+]

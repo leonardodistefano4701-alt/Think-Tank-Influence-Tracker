@@ -1,0 +1,11 @@
+.env
+node_modules/
+__pycache__/
+*.pyc
+.next/
+.venv/
+venv/
+ttit.db
+*.db
+.DS_Store
+*.log
