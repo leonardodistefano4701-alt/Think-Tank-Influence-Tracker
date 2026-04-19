@@ -1,0 +1,17 @@
+.git
+.gitignore
+.env
+.venv
+venv
+__pycache__
+*.pyc
+.next
+node_modules
+.DS_Store
+*.log
+data-pipeline
+scripts
+CLAUDE.md
+IMPLEMENTATION_PLAN.md
+ERROR_LOG.md
+README.md

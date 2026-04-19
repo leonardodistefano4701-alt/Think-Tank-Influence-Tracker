@@ -5,7 +5,6 @@ __pycache__/
 .next/
 .venv/
 venv/
-ttit.db
-*.db
+!ttit.db
 .DS_Store
 *.log
