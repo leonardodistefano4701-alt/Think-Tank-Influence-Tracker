@@ -59,6 +59,9 @@ export interface Legislation {
   topic_tags: string | null;
   summary: string | null;
   introduced_date: string | null;
+  metadata: string;
+  policy_area: string | null;
+  latest_action: string | null;
 }
 
 export interface InfluenceLink {

@@ -205,14 +205,14 @@ export default async function SearchPage({
                   <span className="text-xs font-mono text-muted">#{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold text-white">{highlightMatch(d.donor_name, q)}</span>
+                      <Link prefetch={false} href={`/donors/${d.id}`} className="font-bold text-white hover:text-primary transition-colors">{highlightMatch(d.donor_name, q)}</Link>
                       {d.is_foreign_govt === 1 && (
                         <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded-md uppercase flex-shrink-0">Foreign</span>
                       )}
                     </div>
                     <div className="text-xs text-muted flex gap-3 mt-0.5">
                       <span>{highlightMatch(d.industry || '', q)}</span>
-                      <span>→ <Link href={`/think-tanks/${d.tank_slug}`} className="text-primary hover:underline">{d.tank_name}</Link></span>
+                      <span>→ <Link prefetch={false} href={`/think-tanks/${d.tank_slug}`} className="text-primary hover:underline">{d.tank_name}</Link></span>
                       {d.year && <span>({d.year})</span>}
                     </div>
                   </div>
@@ -238,7 +238,7 @@ export default async function SearchPage({
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1 flex-wrap">
                       <span className="font-mono text-xs text-muted">{highlightMatch(leg.bill_id, q)}</span>
-                      <span className="font-bold text-white">{highlightMatch(leg.title, q)}</span>
+                      <Link prefetch={false} href={`/legislation/${leg.id}`} className="font-bold text-white hover:text-yellow-400 transition-colors">{highlightMatch(leg.title, q)}</Link>
                     </div>
                     <p className="text-sm text-muted line-clamp-2">{highlightMatch(leg.summary || '', q)}</p>
                   </div>
@@ -267,7 +267,7 @@ export default async function SearchPage({
                 <div className="font-bold text-white mb-1">{highlightMatch(p.title, q)}</div>
                 <p className="text-sm text-muted line-clamp-2 mb-2">{highlightMatch(p.summary || '', q)}</p>
                 <div className="flex items-center justify-between">
-                  <Link href={`/think-tanks/${p.tank_slug}`} className="text-xs text-primary hover:underline">{p.tank_name}</Link>
+                  <Link prefetch={false} href={`/think-tanks/${p.tank_slug}`} className="text-xs text-primary hover:underline">{p.tank_name}</Link>
                   <div className="flex gap-1">
                     {(p.topic_tags || '').split(',').map((tag: string) => (
                       <span key={tag} className="px-1.5 py-0.5 text-[10px] bg-card-border rounded-md text-muted">{highlightMatch(tag.trim(), q)}</span>
@@ -293,7 +293,7 @@ export default async function SearchPage({
                 <div className="flex items-center justify-between">
                   <div>
                     <span className="font-bold text-white">{highlightMatch(lb.registrant_name, q)}</span>
-                    <span className="text-muted text-sm ml-2">→ <Link href={`/think-tanks/${lb.tank_slug}`} className="text-primary hover:underline">{lb.tank_name}</Link></span>
+                    <span className="text-muted text-sm ml-2">→ <Link prefetch={false} href={`/think-tanks/${lb.tank_slug}`} className="text-primary hover:underline">{lb.tank_name}</Link></span>
                     <p className="text-sm text-muted mt-1">{highlightMatch(lb.issue_description || '', q)}</p>
                   </div>
                   <span className="font-bold text-orange-400">{formatDollar(lb.amount)}</span>
@@ -340,7 +340,7 @@ export default async function SearchPage({
 
       {/* Back Link */}
       <div className="mt-4">
-        <Link href="/" className="text-primary hover:underline flex items-center gap-1">
+        <Link prefetch={false} href="/" className="text-primary hover:underline flex items-center gap-1">
           ← Back home
         </Link>
       </div>

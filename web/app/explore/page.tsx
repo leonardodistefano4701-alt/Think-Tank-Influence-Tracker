@@ -75,7 +75,7 @@ export default async function ExplorePage() {
                 {/* Tank Header */}
                 <div className="flex items-center gap-4 p-4 bg-card-border/20">
                   <Building2 className="w-6 h-6 text-primary" />
-                  <Link href={`/think-tanks/${entity.slug}`} className="font-bold text-lg text-white hover:text-primary transition-colors">
+                  <Link prefetch={false} href={`/think-tanks/${entity.slug}`} className="font-bold text-lg text-white hover:text-primary transition-colors">
                     {entity.name}
                   </Link>
                   {entity.lean && <span className="px-2 py-0.5 text-xs bg-card-border rounded-full text-muted">{entity.lean}</span>}
@@ -141,7 +141,7 @@ export default async function ExplorePage() {
                     )}
                   </div>
                   <div className="text-xs text-muted mt-1">
-                    → <Link href={`/think-tanks/${(d as any).tank_slug}`} className="text-primary hover:underline">{(d as any).tank_name}</Link>
+                    → <Link prefetch={false} href={`/think-tanks/${(d as any).tank_slug}`} className="text-primary hover:underline">{(d as any).tank_name}</Link>
                   </div>
                   <div className="text-[10px] text-muted/60 mt-0.5">{d.industry}</div>
                 </div>

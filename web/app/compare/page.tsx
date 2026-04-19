@@ -1,6 +1,8 @@
 import { getDb } from "@/lib/db";
 import { Entity, Donor, InfluenceLink, Financial } from "@/lib/types";
 import Link from "next/link";
+import CompareSelector from "@/components/CompareSelector";
+import { ChevronRight, FileText, Scale } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +24,8 @@ interface TankStats {
   latestRevenue: number | null;
   topDonor: string;
   topDonorAmount: number;
+  detailedLegislation: any[];
+  detailedDonors: any[];
 }
 
 function getStats(db: any, entity: Entity): TankStats {
@@ -30,6 +34,17 @@ function getStats(db: any, entity: Entity): TankStats {
   const paperCount = db.prepare("SELECT COUNT(*) as cnt FROM policy_papers WHERE entity_id = ?").get(entity.id) as { cnt: number };
   const lobbyTotal = db.prepare("SELECT SUM(amount) as total FROM lobbying WHERE client_entity_id = ?").get(entity.id) as { total: number | null };
   const latestFinancial = db.prepare("SELECT total_revenue FROM financials WHERE entity_id = ? ORDER BY fiscal_year DESC LIMIT 1").get(entity.id) as { total_revenue: number } | undefined;
+
+  // Complex query to get actual legislation targeted by this think tank via its papers
+  const legTargets = db.prepare(`
+    SELECT l.id, l.title, l.bill_id, l.summary, il.link_type, pp.title as paper_title
+    FROM influence_links il
+    JOIN legislation l ON il.target_id = l.id
+    JOIN policy_papers pp ON il.source_id = pp.id AND il.source_type = 'policy_paper'
+    WHERE pp.entity_id = ? AND il.target_type = 'legislation'
+    GROUP BY l.id
+    ORDER BY il.strength DESC LIMIT 5
+  `).all(entity.id) as any[];
 
   const foreignDonors = donors.filter(d => d.is_foreign_govt === 1);
   const totalDonations = donors.reduce((s, d) => s + (d.amount || 0), 0);
@@ -48,6 +63,8 @@ function getStats(db: any, entity: Entity): TankStats {
     latestRevenue: latestFinancial?.total_revenue || null,
     topDonor: donors[0]?.donor_name || "—",
     topDonorAmount: donors[0]?.amount || 0,
+    detailedLegislation: legTargets,
+    detailedDonors: donors.slice(0, 5),
   };
 }
 
@@ -97,24 +114,11 @@ export default async function ComparePage({
       </div>
 
       {/* Tank Selector */}
-      <div className="glass p-4 rounded-xl flex flex-col md:flex-row items-center gap-4">
-        <span className="text-sm text-muted">Compare:</span>
-        <div className="flex flex-wrap gap-2">
-          {allTanks.map(t => (
-            <Link
-              key={t.slug}
-              href={`/compare?a=${t.slug === slugA ? slugA : t.slug}&b=${t.slug === slugA ? slugB : (t.slug === slugB ? slugB : t.slug)}`}
-              className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${
-                t.slug === slugA ? 'bg-primary text-black font-bold' :
-                t.slug === slugB ? 'bg-yellow-500 text-black font-bold' :
-                'bg-card-border/50 text-muted hover:text-white'
-              }`}
-            >
-              {t.name}
-            </Link>
-          ))}
-        </div>
-      </div>
+      <CompareSelector 
+        tanks={allTanks.map(t => ({ slug: t.slug, name: t.name }))}
+        currentA={slugA}
+        currentB={slugB}
+      />
 
       {/* Comparison Table */}
       <div className="glass p-6 rounded-2xl">
@@ -168,6 +172,80 @@ export default async function ComparePage({
             </div>
           );
         })}
+      </div>
+
+      {/* ── Deep Dive Explicit Breakdowns ──────────────────────────────────── */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-4">
+        <DetailedPanel stats={statsA} accentColor="text-primary" borderAccent="border-primary/20" />
+        <DetailedPanel stats={statsB} accentColor="text-yellow-500" borderAccent="border-yellow-500/20" />
+      </div>
+    </div>
+  );
+}
+
+function DetailedPanel({ stats, accentColor, borderAccent }: { stats: TankStats; accentColor: string; borderAccent: string }) {
+  return (
+    <div className={`glass p-6 rounded-2xl border ${borderAccent} flex flex-col gap-6`}>
+      <h3 className={`text-2xl font-bold ${accentColor} border-b border-card-border pb-3`}>
+        {stats.entity.name} Detailed Profile
+      </h3>
+
+      {/* Legislation Breakdown */}
+      <div>
+        <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-4 flex items-center gap-2">
+          <Scale className="w-4 h-4" /> Targeted Legislation (Top 5)
+        </h4>
+        {stats.detailedLegislation.length === 0 ? (
+          <p className="text-xs text-muted italic">No specific legislation targets tracked yet.</p>
+        ) : (
+          <div className="flex flex-col gap-4">
+            {stats.detailedLegislation.map((leg: any, idx) => (
+              <div key={leg.id || idx} className="bg-card-border/20 p-4 rounded-lg flex flex-col gap-2">
+                <div className="flex justify-between items-start gap-2">
+                  <Link href={`/legislation/${leg.id}`} className="font-semibold text-white hover:text-primary transition-colors leading-tight">
+                    {leg.title}
+                  </Link>
+                  <span className="text-[10px] bg-card-border px-2 py-0.5 rounded font-mono shrink-0">{leg.bill_id}</span>
+                </div>
+                {leg.summary && (
+                  <p className="text-xs text-muted/90 italic leading-relaxed line-clamp-3 bg-black/20 p-2 rounded border border-card-border/50">
+                    "{leg.summary}"
+                  </p>
+                )}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-[10px] text-muted uppercase font-bold bg-white/5 px-2 py-0.5 rounded">Action: {leg.link_type?.replace("_", " ")}</span>
+                  <span className="text-[10px] text-muted truncate">via "{leg.paper_title}"</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Donors Breakdown */}
+      <div>
+        <h4 className="text-sm font-bold uppercase tracking-widest text-muted mb-4 flex items-center gap-2 mt-4">
+          <FileText className="w-4 h-4" /> Principal Funding Sources (Top 5)
+        </h4>
+        {stats.detailedDonors.length === 0 ? (
+          <p className="text-xs text-muted italic">No specific donors tracked yet.</p>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {stats.detailedDonors.map((d: any, idx: number) => (
+              <div key={d.id || idx} className="bg-card-border/20 p-3 rounded-lg flex flex-col gap-1.5 border-l-2 border-l-green-500/50">
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-sm text-white">{d.donor_name}</span>
+                  <span className="font-bold text-green-400 font-mono text-sm">{formatDollar(d.amount)}</span>
+                </div>
+                <div className="flex items-center gap-2 flex-wrap">
+                  {d.industry && <span className="text-[10px] text-muted bg-white/5 px-2 py-0.5 rounded border border-card-border/50">Industry: {d.industry}</span>}
+                  <span className="text-[10px] text-muted bg-white/5 px-2 py-0.5 rounded border border-card-border/50">Source: {d.source || 'Unknown'}</span>
+                  {d.is_foreign_govt === 1 && <span className="text-[10px] text-red-400 bg-red-400/10 px-2 py-0.5 rounded font-bold uppercase tracking-wide">Foreign Govt</span>}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

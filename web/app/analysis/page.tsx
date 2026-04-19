@@ -11,17 +11,20 @@ function formatDollar(val: number | null) {
 
 function statusIcon(status: string) {
   if (status === 'Signed into Law') return <CheckCircle className="w-4 h-4 text-green-400" />;
-  if (status === 'Passed House') return <TrendingUp className="w-4 h-4 text-yellow-400" />;
+  if (status === 'Passed House' || status === 'Passed Senate' || status === 'Passed Both Chambers') return <TrendingUp className="w-4 h-4 text-yellow-400" />;
+  if (status === 'Failed') return <XCircle className="w-4 h-4 text-red-500" />;
   return <Clock className="w-4 h-4 text-muted" />;
 }
 
 function statusColor(status: string) {
   if (status === 'Signed into Law') return 'bg-green-500/20 text-green-400';
-  if (status === 'Passed House') return 'bg-yellow-500/20 text-yellow-400';
+  if (status === 'Passed House' || status === 'Passed Senate' || status === 'Passed Both Chambers') return 'bg-yellow-500/20 text-yellow-400';
+  if (status === 'Failed') return 'bg-red-500/20 text-red-500';
   return 'bg-gray-500/20 text-gray-400';
 }
 
 interface DonorChain {
+  donor_id: string;
   donor_name: string;
   donor_amount: number;
   donor_industry: string;
@@ -29,8 +32,10 @@ interface DonorChain {
   donor_to_paper_strength: number;
   donor_to_paper_evidence: string;
   paper_title: string;
+  paper_summary?: string;
   paper_to_leg_strength: number | null;
   paper_to_leg_evidence: string | null;
+  leg_id: string | null;
   leg_title: string | null;
   leg_bill_id: string | null;
   leg_status: string | null;
@@ -47,9 +52,11 @@ interface TankAnalysis {
   signedIntoLaw: number;
   passedChamber: number;
   inCommittee: number;
+  failed: number;
   opposed: number;
   successRate: number;
   advancementRate: number;
+  discoveryCoverage: number;
   totalDonorInfluence: number;
   foreignDonorLinks: number;
   avgInfluenceStrength: number;
@@ -72,6 +79,7 @@ export default async function AnalysisPage() {
     let signedIntoLaw = 0;
     let passedChamber = 0;
     let inCommittee = 0;
+    let failed = 0;
     let opposed = 0;
     let papersWithLegislation = 0;
 
@@ -79,7 +87,7 @@ export default async function AnalysisPage() {
 
     for (const paper of papers) {
       const links = db.prepare(`
-        SELECT il.*, l.title as leg_title, l.bill_id, l.status as leg_status
+        SELECT il.*, l.id as leg_id, l.title as leg_title, l.bill_id, l.status as leg_status
         FROM influence_links il
         JOIN legislation l ON il.target_id = l.id
         WHERE il.source_type = 'policy_paper' AND il.source_id = ?
@@ -93,7 +101,8 @@ export default async function AnalysisPage() {
           opposed++;
         } else {
           if (link.leg_status === 'Signed into Law') signedIntoLaw++;
-          else if (link.leg_status === 'Passed House') passedChamber++;
+          else if (link.leg_status?.includes('Passed')) passedChamber++;
+          else if (link.leg_status === 'Failed') failed++;
           else inCommittee++;
         }
       }
@@ -103,7 +112,7 @@ export default async function AnalysisPage() {
     const chains: DonorChain[] = [];
     const donorPaperLinks = db.prepare(`
       SELECT il.strength, il.evidence, il.target_id as paper_id,
-             d.donor_name, d.amount, d.industry, d.is_foreign_govt
+             d.id as donor_id, d.donor_name, d.amount, d.industry, d.is_foreign_govt
       FROM influence_links il
       JOIN donors d ON il.source_id = d.id
       WHERE il.source_type = 'donor' AND il.target_type = 'policy_paper'
@@ -128,6 +137,7 @@ export default async function AnalysisPage() {
 
       if (legLinks.length === 0) {
         chains.push({
+          donor_id: dpl.donor_id,
           donor_name: dpl.donor_name,
           donor_amount: dpl.amount,
           donor_industry: dpl.industry,
@@ -135,8 +145,10 @@ export default async function AnalysisPage() {
           donor_to_paper_strength: dpl.strength,
           donor_to_paper_evidence: dpl.evidence,
           paper_title: paper.title,
+          paper_summary: paper.summary,
           paper_to_leg_strength: null,
           paper_to_leg_evidence: null,
+          leg_id: null,
           leg_title: null,
           leg_bill_id: null,
           leg_status: null,
@@ -146,6 +158,7 @@ export default async function AnalysisPage() {
       } else {
         for (const ll of legLinks) {
           chains.push({
+            donor_id: dpl.donor_id,
             donor_name: dpl.donor_name,
             donor_amount: dpl.amount,
             donor_industry: dpl.industry,
@@ -153,8 +166,10 @@ export default async function AnalysisPage() {
             donor_to_paper_strength: dpl.strength,
             donor_to_paper_evidence: dpl.evidence,
             paper_title: paper.title,
+            paper_summary: paper.summary,
             paper_to_leg_strength: ll.strength,
             paper_to_leg_evidence: ll.evidence,
+            leg_id: ll.leg_id,
             leg_title: ll.leg_title,
             leg_bill_id: ll.bill_id,
             leg_status: ll.leg_status,
@@ -166,9 +181,10 @@ export default async function AnalysisPage() {
     }
 
     // Calculate success rates
-    const totalAdvocated = signedIntoLaw + passedChamber + inCommittee;
+    const totalAdvocated = signedIntoLaw + passedChamber + inCommittee + failed;
     const successRate = totalAdvocated > 0 ? (signedIntoLaw / totalAdvocated) * 100 : 0;
     const advancementRate = totalAdvocated > 0 ? ((signedIntoLaw + passedChamber) / totalAdvocated) * 100 : 0;
+    const discoveryCoverage = papers.length > 0 ? (papersWithLegislation / papers.length) * 100 : 0;
 
     tankAnalyses.push({
       name: tank.name,
@@ -179,9 +195,11 @@ export default async function AnalysisPage() {
       signedIntoLaw,
       passedChamber,
       inCommittee,
+      failed,
       opposed,
       successRate,
       advancementRate,
+      discoveryCoverage,
       totalDonorInfluence,
       foreignDonorLinks,
       avgInfluenceStrength: donorPaperLinks.length > 0 ? strengthSum / donorPaperLinks.length : 0,
@@ -219,19 +237,22 @@ export default async function AnalysisPage() {
                 <th className="text-center py-3 px-2">Lean</th>
                 <th className="text-center py-3 px-2">Papers</th>
                 <th className="text-center py-3 px-2">With Legislation</th>
+                <th className="text-center py-3 px-2">Coverage</th>
                 <th className="text-center py-3 px-2">
-                  <span className="flex items-center justify-center gap-1"><CheckCircle className="w-3.5 h-3.5 text-green-400"/>Signed into Law</span>
+                  <span className="flex items-center justify-center gap-1"><CheckCircle className="w-3.5 h-3.5 text-green-400"/>Laws</span>
                 </th>
                 <th className="text-center py-3 px-2">
-                  <span className="flex items-center justify-center gap-1"><TrendingUp className="w-3.5 h-3.5 text-yellow-400"/>Passed Chamber</span>
+                  <span className="flex items-center justify-center gap-1"><TrendingUp className="w-3.5 h-3.5 text-yellow-400"/>Passed</span>
                 </th>
                 <th className="text-center py-3 px-2">
-                  <span className="flex items-center justify-center gap-1"><Clock className="w-3.5 h-3.5 text-gray-400"/>In Committee</span>
+                  <span className="flex items-center justify-center gap-1"><Clock className="w-3.5 h-3.5 text-gray-400"/>Cmte</span>
                 </th>
                 <th className="text-center py-3 px-2">
-                  <span className="flex items-center justify-center gap-1"><XCircle className="w-3.5 h-3.5 text-red-400"/>Opposed</span>
+                  <span className="flex items-center justify-center gap-1"><XCircle className="w-3.5 h-3.5 text-red-500"/>Failed</span>
                 </th>
-                <th className="text-center py-3 px-2">Success Rate</th>
+                <th className="text-center py-3 px-2">
+                  <span className="flex items-center justify-center gap-1"><AlertTriangle className="w-3.5 h-3.5 text-red-400"/>Opposed</span>
+                </th>
                 <th className="text-center py-3 px-2">Advancement Rate</th>
               </tr>
             </thead>
@@ -239,7 +260,7 @@ export default async function AnalysisPage() {
               {sortedBySuccess.map((t, i) => (
                 <tr key={t.slug} className="border-b border-card-border/50 hover:bg-card-border/20 transition-colors">
                   <td className="py-4 px-4">
-                    <Link href={`/think-tanks/${t.slug}`} className="font-bold text-white hover:text-primary transition-colors">
+                    <Link prefetch={false} href={`/think-tanks/${t.slug}`} className="font-bold text-white hover:text-primary transition-colors">
                       {t.name}
                     </Link>
                   </td>
@@ -248,15 +269,16 @@ export default async function AnalysisPage() {
                   </td>
                   <td className="text-center py-4 px-2 font-semibold">{t.totalPapers}</td>
                   <td className="text-center py-4 px-2 font-semibold">{t.papersWithLegislation}</td>
+                  <td className="text-center py-4 px-2">
+                    <span className={`font-semibold text-sm ${t.discoveryCoverage >= 50 ? 'text-green-400' : 'text-muted'}`}>
+                      {Math.round(t.discoveryCoverage)}%
+                    </span>
+                  </td>
                   <td className="text-center py-4 px-2 font-bold text-green-400">{t.signedIntoLaw}</td>
                   <td className="text-center py-4 px-2 font-bold text-yellow-400">{t.passedChamber}</td>
                   <td className="text-center py-4 px-2 text-muted">{t.inCommittee}</td>
+                  <td className="text-center py-4 px-2 text-red-500 font-semibold">{t.failed}</td>
                   <td className="text-center py-4 px-2 text-red-400">{t.opposed}</td>
-                  <td className="text-center py-4 px-2">
-                    <span className={`font-bold text-lg ${t.successRate >= 50 ? 'text-green-400' : t.successRate > 0 ? 'text-yellow-400' : 'text-muted'}`}>
-                      {Math.round(t.successRate)}%
-                    </span>
-                  </td>
                   <td className="text-center py-4 px-2">
                     <div className="flex items-center justify-center gap-2">
                       <div className="w-20 h-2 rounded-full bg-card-border overflow-hidden">
@@ -272,8 +294,8 @@ export default async function AnalysisPage() {
           </table>
         </div>
         <div className="mt-4 text-xs text-muted flex gap-6">
-          <span><strong>Success Rate</strong> = Signed into Law / Total Advocated</span>
-          <span><strong>Advancement Rate</strong> = (Signed + Passed Chamber) / Total Advocated</span>
+          <span><strong>Coverage</strong> = Papers mapped to bills / Total Papers</span>
+          <span><strong>Advancement Rate</strong> = (Laws + Passed) / Total Tracked Bills</span>
         </div>
       </div>
 
@@ -283,7 +305,7 @@ export default async function AnalysisPage() {
           <div className="flex items-center justify-between mb-6">
             <div>
               <h2 className="text-2xl font-bold flex items-center gap-3">
-                <Link href={`/think-tanks/${tank.slug}`} className="hover:text-primary transition-colors">
+                <Link prefetch={false} href={`/think-tanks/${tank.slug}`} className="hover:text-primary transition-colors">
                   {tank.name}
                 </Link>
                 <span className="px-2 py-0.5 text-xs rounded-full bg-card-border text-muted">{tank.lean}</span>
@@ -319,7 +341,7 @@ export default async function AnalysisPage() {
                     </div>
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
-                        <span className="font-bold text-white">{chain.donor_name}</span>
+                        <Link prefetch={false} href={`/donors/${chain.donor_id}`} className="font-bold text-white hover:text-primary transition-colors">{chain.donor_name}</Link>
                         <span className="font-semibold text-primary">{formatDollar(chain.donor_amount)}</span>
                         {chain.is_foreign_govt === 1 && (
                           <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded-md uppercase">Foreign</span>
@@ -340,12 +362,15 @@ export default async function AnalysisPage() {
                   </div>
 
                   {/* Policy Paper */}
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0">
+                  <div className="flex items-start gap-3">
+                    <div className="w-8 h-8 rounded-lg bg-blue-500/20 flex items-center justify-center flex-shrink-0 mt-1">
                       <FileText className="w-4 h-4 text-blue-400" />
                     </div>
                     <div className="flex-1">
                       <span className="font-semibold text-white text-sm">{chain.paper_title}</span>
+                      {chain.paper_summary && (
+                         <div className="text-xs text-muted/80 italic mt-1 line-clamp-2">"{chain.paper_summary}"</div>
+                      )}
                     </div>
                   </div>
 
@@ -367,7 +392,7 @@ export default async function AnalysisPage() {
                         </div>
                         <div className="flex-1">
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-white text-sm">{chain.leg_title}</span>
+                            <Link prefetch={false} href={`/legislation/${chain.leg_id}`} className="font-semibold text-white hover:text-yellow-400 transition-colors text-sm">{chain.leg_title}</Link>
                             <span className="font-mono text-xs text-muted">{chain.leg_bill_id}</span>
                           </div>
                         </div>
@@ -389,7 +414,7 @@ export default async function AnalysisPage() {
 
                 {/* Evidence */}
                 <div className="bg-card-border/10 px-4 py-3 border-t border-card-border/30">
-                  <p className="text-xs text-muted leading-relaxed">
+                  <div className="text-xs text-muted leading-relaxed">
                     <span className="font-bold text-white/60">Evidence: </span>
                     {chain.donor_to_paper_evidence}
                     {chain.paper_to_leg_evidence && (
@@ -398,7 +423,7 @@ export default async function AnalysisPage() {
                         {chain.paper_to_leg_evidence}
                       </span>
                     )}
-                  </p>
+                  </div>
                 </div>
               </div>
             ))}

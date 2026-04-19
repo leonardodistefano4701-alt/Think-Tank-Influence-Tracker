@@ -17,8 +17,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} min-h-screen flex flex-col bg-background text-foreground`}>
+    <html lang="en" className="dark" suppressHydrationWarning>
+      <body suppressHydrationWarning className={`${inter.className} min-h-screen flex flex-col bg-background text-foreground`}>
         <nav className="border-b border-card-border bg-card/80 backdrop-blur-md sticky top-0 z-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between h-16">
@@ -32,7 +32,7 @@ export default function RootLayout({
                 <Link href="/explore" className="text-sm text-muted hover:text-white transition-colors">Explore</Link>
                 <Link href="/compare" className="text-sm text-muted hover:text-white transition-colors">Compare</Link>
                 <Link href="/analysis" className="text-sm text-muted hover:text-white transition-colors font-semibold text-primary">Analysis</Link>
-                <Link href="/campaign-finance" className="text-sm text-muted hover:text-white transition-colors">FEC</Link>
+                <Link href="/grants" className="text-sm text-muted hover:text-white transition-colors">Grants</Link>
               </div>
             </div>
           </div>

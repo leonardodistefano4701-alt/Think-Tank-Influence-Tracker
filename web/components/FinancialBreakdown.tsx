@@ -23,9 +23,9 @@ export default function FinancialBreakdown({ financials }: { financials: Financi
   };
 
   return (
-    <div className="glass p-6 rounded-xl w-full h-[400px]">
+    <div className="glass p-6 rounded-xl w-full">
       <h3 className="text-xl font-bold mb-6">Financial Overview</h3>
-      <div className="w-full h-full pb-8">
+      <div className="w-full" style={{ height: 320, minHeight: 200 }}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
             data={data}
@@ -36,7 +36,7 @@ export default function FinancialBreakdown({ financials }: { financials: Financi
             <YAxis stroke="#737373" tickFormatter={formatDollar} />
             <Tooltip 
               contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #262626' }}
-              formatter={(value: number) => formatDollar(value)}
+              formatter={(value: any) => formatDollar(value as number)}
             />
             <Legend />
             <Bar dataKey="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />

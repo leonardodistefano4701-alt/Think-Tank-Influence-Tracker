@@ -93,19 +93,30 @@ def parse_bill_xml(xml_text):
     latest_action_text = ''
     if actions:
         latest_action_text = actions[-1]['text']
-        action_lower = latest_action_text.lower()
-        if 'became public law' in action_lower or 'signed by president' in action_lower:
-            status = 'Signed into Law'
-        elif 'passed senate' in action_lower and 'passed' in action_lower:
-            status = 'Passed Both Chambers'
-        elif 'passed house' in action_lower or 'on passage' in action_lower:
-            status = 'Passed House'
-        elif 'passed senate' in action_lower:
-            status = 'Passed Senate'
-        elif 'reported' in action_lower:
-            status = 'Reported by Committee'
-        elif 'committee' in action_lower:
-            status = 'In Committee'
+        
+        # Check all actions in reverse order to find the highest status achieved
+        for action in reversed(actions):
+            action_lower = action['text'].lower()
+            if 'became public law' in action_lower or 'signed by president' in action_lower:
+                status = 'Signed into Law'
+                break
+            elif 'vetoed' in action_lower or 'failed' in action_lower or 'point of order sustained' in action_lower:
+                status = 'Failed'
+                break
+            elif ('passed senate' in action_lower or 'agreed to in senate' in action_lower) and ('passed house' in action_lower or 'agreed to in house' in action_lower):
+                status = 'Passed Both Chambers'
+                break
+            elif 'passed house' in action_lower or 'agreed to in house' in action_lower:
+                status = 'Passed House'
+                # Don't break, keep looking to see if it was Passed Both Chambers or Signed
+            elif 'passed senate' in action_lower or 'agreed to in senate' in action_lower:
+                status = 'Passed Senate'
+            elif 'reported' in action_lower and status == 'Introduced':
+                status = 'Reported by Committee'
+            elif 'referred to' in action_lower and status == 'Introduced':
+                status = 'In Committee'
+            elif 'committee' in action_lower and status == 'Introduced':
+                status = 'In Committee'
 
     # Extract sponsors
     sponsors = []
@@ -233,9 +244,7 @@ def create_fts5(conn):
     try:
         cur.execute("""
             CREATE VIRTUAL TABLE search_legislation USING fts5(
-                bill_id, title, summary, status, policy_area, sponsors,
-                content='legislation',
-                content_rowid='rowid'
+                bill_id, title, summary, status, policy_area, sponsors
             )
         """)
         cur.execute("""
@@ -254,9 +263,7 @@ def create_fts5(conn):
     try:
         cur.execute("""
             CREATE VIRTUAL TABLE search_entities USING fts5(
-                name, type, description, lean,
-                content='entities',
-                content_rowid='rowid'
+                name, type, description, lean
             )
         """)
         cur.execute("""
@@ -273,9 +280,7 @@ def create_fts5(conn):
     try:
         cur.execute("""
             CREATE VIRTUAL TABLE search_donors USING fts5(
-                donor_name, industry, source,
-                content='donors',
-                content_rowid='rowid'
+                donor_name, industry, source
             )
         """)
         cur.execute("""
@@ -292,9 +297,7 @@ def create_fts5(conn):
     try:
         cur.execute("""
             CREATE VIRTUAL TABLE search_papers USING fts5(
-                title, summary, topic_tags,
-                content='policy_papers',
-                content_rowid='rowid'
+                title, summary, topic_tags
             )
         """)
         cur.execute("""

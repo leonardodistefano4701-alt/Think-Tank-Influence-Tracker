@@ -4,6 +4,8 @@ import FinancialBreakdown from "@/components/FinancialBreakdown";
 import { Building2, DollarSign, AlertTriangle, Scale, Globe, FileText, Link2, ShieldAlert } from "lucide-react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
+import AIVerdictCard from "@/components/AIVerdictCard";
+import PolicyPaperCard from "@/components/PolicyPaperCard";
 
 export const dynamic = 'force-dynamic';
 
@@ -37,6 +39,17 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
   const donors = db.prepare("SELECT * FROM donors WHERE entity_id = ? ORDER BY amount DESC").all(entity.id) as Donor[];
   const policyPapers = db.prepare("SELECT * FROM policy_papers WHERE entity_id = ? ORDER BY published_date DESC").all(entity.id) as PolicyPaper[];
   const lobbying = db.prepare("SELECT * FROM lobbying WHERE client_entity_id = ? ORDER BY filing_year DESC").all(entity.id) as Lobbying[];
+
+  const verdictRow = db.prepare("SELECT * FROM analysis_verdicts WHERE target_id = ?")
+    .get(entity.id) as any | undefined;
+  
+  const aiInfo = verdictRow ? {
+    verdict: verdictRow.verdict,
+    reasoning: verdictRow.reasoning,
+    evidenceSummary: verdictRow.evidence_summary,
+    confidence: verdictRow.confidence,
+    modelUsed: verdictRow.model_used
+  } : null;
 
   // Get influence links where this entity is the source
   const influenceLinks = db.prepare(`
@@ -104,6 +117,8 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
           <div className="text-xs text-muted mt-1">Foreign Gov't Donors</div>
         </div>
       </div>
+      
+      {aiInfo && <AIVerdictCard info={aiInfo} />}
 
       {/* ── Financial + Donors Row ──────────────────────────────────── */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -152,22 +167,20 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
         <div className="glass p-6 rounded-xl">
           <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
             <FileText className="w-5 h-5 text-blue-400" />
-            Key Policy Papers
+            Policy Papers
+            <span className="text-sm font-normal text-muted">({policyPapers.length})</span>
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <p className="text-sm text-muted mb-4">Click any title to read the summary.</p>
+          <div className="flex flex-col gap-3">
             {policyPapers.map(p => (
-              <div key={p.id} className="p-4 rounded-lg bg-card-border/30 hover:bg-card-border/50 transition-colors">
-                <h4 className="font-semibold text-white mb-2 leading-tight">{p.title}</h4>
-                <p className="text-sm text-muted line-clamp-3 mb-3">{p.summary}</p>
-                <div className="flex items-center justify-between text-xs text-muted">
-                  <span>{p.published_date}</span>
-                  <div className="flex gap-1 flex-wrap">
-                    {p.topic_tags?.split(",").map(tag => (
-                      <span key={tag} className="px-1.5 py-0.5 bg-primary/10 text-primary rounded-md">{tag.trim()}</span>
-                    ))}
-                  </div>
-                </div>
-              </div>
+              <PolicyPaperCard
+                key={p.id}
+                title={p.title}
+                summary={p.summary}
+                publishedDate={p.published_date}
+                topicTags={p.topic_tags}
+                url={p.url}
+              />
             ))}
           </div>
         </div>
