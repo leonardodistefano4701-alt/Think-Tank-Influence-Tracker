@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db";
 import Link from "next/link";
-import { TrendingUp, AlertTriangle, CheckCircle, XCircle, Clock, DollarSign, FileText, Scale, ArrowRight, ChevronRight } from "lucide-react";
+import { TrendingUp, AlertTriangle, CheckCircle, XCircle, Clock, DollarSign, FileText, Scale, ChevronRight } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -257,7 +257,7 @@ export default async function AnalysisPage() {
               </tr>
             </thead>
             <tbody>
-              {sortedBySuccess.map((t, i) => (
+              {sortedBySuccess.map((t) => (
                 <tr key={t.slug} className="border-b border-card-border/50 hover:bg-card-border/20 transition-colors">
                   <td className="py-4 px-4">
                     <Link prefetch={false} href={`/think-tanks/${t.slug}`} className="font-bold text-white hover:text-primary transition-colors">
@@ -369,7 +369,7 @@ export default async function AnalysisPage() {
                     <div className="flex-1">
                       <span className="font-semibold text-white text-sm">{chain.paper_title}</span>
                       {chain.paper_summary && (
-                         <div className="text-xs text-muted/80 italic mt-1 line-clamp-2">"{chain.paper_summary}"</div>
+                         <div className="text-xs text-muted/80 italic mt-1 line-clamp-2">&quot;{chain.paper_summary}&quot;</div>
                       )}
                     </div>
                   </div>

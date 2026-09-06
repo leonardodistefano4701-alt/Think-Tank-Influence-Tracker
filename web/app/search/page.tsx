@@ -1,8 +1,8 @@
 import { getDb } from "@/lib/db";
-import { Entity, Donor, InfluenceLink } from "@/lib/types";
+import { Entity, Donor } from "@/lib/types";
 import ProfileCard from "@/components/ProfileCard";
 import Link from "next/link";
-import { Search, DollarSign, FileText, Scale, AlertTriangle, Building2, Link2, Megaphone } from "lucide-react";
+import { Search, DollarSign, FileText, Scale, Building2, Link2, Megaphone } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -25,7 +25,7 @@ function highlightMatch(text: string, query: string) {
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 }) {
   const resolvedParams = await searchParams;
   const q = resolvedParams.q || "";

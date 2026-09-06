@@ -1,8 +1,9 @@
 import { getDb } from "@/lib/db";
-import { Entity, Donor, InfluenceLink, Financial } from "@/lib/types";
+import { notFound } from "next/navigation";
+import { Entity, Donor, InfluenceLink } from "@/lib/types";
 import Link from "next/link";
 import CompareSelector from "@/components/CompareSelector";
-import { ChevronRight, FileText, Scale } from "lucide-react";
+import { FileText, Scale } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -83,7 +84,7 @@ function StatRow({ label, valueA, valueB, format = "text", highlight = false }: 
 export default async function ComparePage({
   searchParams,
 }: {
-  searchParams: { a?: string; b?: string };
+  searchParams: Promise<{ a?: string; b?: string }>;
 }) {
   const resolvedParams = await searchParams;
   const db = getDb();
@@ -95,8 +96,17 @@ export default async function ComparePage({
   const tankA = allTanks.find(t => t.slug === slugA);
   const tankB = allTanks.find(t => t.slug === slugB);
 
+  // An explicitly requested slug that doesn't resolve is a genuine 404, not a 200.
+  if ((resolvedParams.a && !tankA) || (resolvedParams.b && !tankB)) {
+    notFound();
+  }
+
   if (!tankA || !tankB) {
-    return <div className="p-12 text-center text-muted">Select two think tanks to compare.</div>;
+    return (
+      <div className="p-12 text-center text-muted">
+        At least two think tanks are needed to run a comparison.
+      </div>
+    );
   }
 
   const statsA = getStats(db, tankA);
@@ -209,12 +219,12 @@ function DetailedPanel({ stats, accentColor, borderAccent }: { stats: TankStats;
                 </div>
                 {leg.summary && (
                   <p className="text-xs text-muted/90 italic leading-relaxed line-clamp-3 bg-black/20 p-2 rounded border border-card-border/50">
-                    "{leg.summary}"
+                    &quot;{leg.summary}&quot;
                   </p>
                 )}
                 <div className="flex items-center gap-2 mt-1">
                   <span className="text-[10px] text-muted uppercase font-bold bg-white/5 px-2 py-0.5 rounded">Action: {leg.link_type?.replace("_", " ")}</span>
-                  <span className="text-[10px] text-muted truncate">via "{leg.paper_title}"</span>
+                  <span className="text-[10px] text-muted truncate">via &quot;{leg.paper_title}&quot;</span>
                 </div>
               </div>
             ))}

@@ -55,12 +55,12 @@ export default async function DonorsPage() {
         <div className="glass p-5 rounded-xl text-center">
           <AlertTriangle className="w-6 h-6 text-red-500 mx-auto mb-2" />
           <div className="text-2xl font-bold">{foreignDonors.length}</div>
-          <div className="text-xs text-muted mt-1">Foreign Gov't Sources</div>
+          <div className="text-xs text-muted mt-1">Foreign Gov&apos;t Sources</div>
         </div>
         <div className="glass p-5 rounded-xl text-center">
           <DollarSign className="w-6 h-6 text-red-400 mx-auto mb-2" />
           <div className="text-2xl font-bold">{formatDollar(foreignTotal)}</div>
-          <div className="text-xs text-muted mt-1">Foreign Gov't Total</div>
+          <div className="text-xs text-muted mt-1">Foreign Gov&apos;t Total</div>
         </div>
       </div>
 

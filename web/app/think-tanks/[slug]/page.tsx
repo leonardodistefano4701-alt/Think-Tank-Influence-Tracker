@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { Entity, Financial, Donor, InfluenceLink, Legislation, PolicyPaper, Lobbying } from "@/lib/types";
+import { Entity, Financial, Donor, InfluenceLink, PolicyPaper, Lobbying } from "@/lib/types";
 import FinancialBreakdown from "@/components/FinancialBreakdown";
 import { Building2, DollarSign, AlertTriangle, Scale, Globe, FileText, Link2, ShieldAlert } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -62,7 +62,6 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
 
   const totalDonorAmount = donors.reduce((sum, d) => sum + (d.amount || 0), 0);
   const foreignDonors = donors.filter(d => d.is_foreign_govt);
-  const latestFinancial = financials.length > 0 ? financials[financials.length - 1] : null;
 
   return (
     <div className="flex flex-col gap-8">
@@ -114,7 +113,7 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
             <Globe className="w-6 h-6 text-green-500 mx-auto mb-2" />
           )}
           <div className="text-2xl font-bold">{foreignDonors.length}</div>
-          <div className="text-xs text-muted mt-1">Foreign Gov't Donors</div>
+          <div className="text-xs text-muted mt-1">Foreign Gov&apos;t Donors</div>
         </div>
       </div>
       

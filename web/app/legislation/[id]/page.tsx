@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import { Legislation, PolicyPaper, Entity } from "@/lib/types";
+import { Legislation } from "@/lib/types";
 import { Scale, Users, FileText, CheckCircle, Clock, XCircle, TrendingUp, Calendar, ExternalLink, Link2, Building2 } from "lucide-react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -188,7 +188,7 @@ export default async function LegislationProfile({ params }: { params: Promise<{
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span className={`px-3 py-1 font-bold text-xs uppercase tracking-wider rounded-md \${il.link_type === 'opposes' ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'}`}>
+                        <span className={`px-3 py-1 font-bold text-xs uppercase tracking-wider rounded-md ${il.link_type === 'opposes' ? 'bg-red-500/20 text-red-400' : 'bg-primary/20 text-primary'}`}>
                           {il.link_type}
                         </span>
                       </div>
@@ -211,7 +211,7 @@ export default async function LegislationProfile({ params }: { params: Promise<{
 
                       {il.paper_summary && (
                         <div className="mb-4 text-sm text-white/70 italic border-l-2 border-primary/30 pl-3">
-                          "{il.paper_summary.length > 300 ? il.paper_summary.slice(0,300) + '...' : il.paper_summary}"
+                          &quot;{il.paper_summary.length > 300 ? il.paper_summary.slice(0,300) + '...' : il.paper_summary}&quot;
                         </div>
                       )}
                       

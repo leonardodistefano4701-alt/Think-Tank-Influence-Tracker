@@ -1,6 +1,6 @@
 import { getDb } from "@/lib/db";
-import { Donor, InfluenceLink, Entity } from "@/lib/types";
-import { DollarSign, AlertTriangle, FileText, ChevronRight, Building2, Award } from "lucide-react";
+import { Donor } from "@/lib/types";
+import { AlertTriangle, FileText, Building2, Award } from "lucide-react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import AIVerdictCard from "@/components/AIVerdictCard";
@@ -42,7 +42,7 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
   // Aggregate info
   let totalAmount = 0;
   let isForeign = false;
-  let industries = new Set<string>();
+  const industries = new Set<string>();
 
   for (const d of donations) {
     totalAmount += (d.amount || 0);
@@ -204,7 +204,7 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
                       
                       {il.paper_summary && (
                         <div className="mb-4 text-sm text-white/70 italic border-l-2 border-primary/30 pl-3 leading-relaxed">
-                          "{il.paper_summary.length > 300 ? il.paper_summary.slice(0, 300) + '...' : il.paper_summary}"
+                          &quot;{il.paper_summary.length > 300 ? il.paper_summary.slice(0, 300) + '...' : il.paper_summary}&quot;
                         </div>
                       )}
                       
@@ -214,7 +214,7 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
                           Influence Link Evidence
                         </div>
                         <div className="text-sm text-white/80 leading-relaxed mt-2 italic">
-                          "{il.evidence}"
+                          &quot;{il.evidence}&quot;
                         </div>
                       </div>
                     </div>
