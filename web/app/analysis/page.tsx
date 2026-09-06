@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { ProvenanceBanner } from "@/components/ProvenanceBadge";
 import Link from "next/link";
 import { TrendingUp, AlertTriangle, CheckCircle, XCircle, Clock, DollarSign, FileText, Scale, ChevronRight } from "lucide-react";
 
@@ -218,6 +219,12 @@ export default async function AnalysisPage() {
         <h1 className="text-4xl font-extrabold tracking-tight mb-3">
           Influence <span className="text-primary">Analysis</span>
         </h1>
+        <ProvenanceBanner kinds={["seeded_demo", "ai_generated"]}>
+          This scorecard is built on hand-authored donor rows and model-asserted influence links.
+          Bill statuses are verified against GovInfo, but a &quot;success rate&quot; here only counts
+          bills that a link row already connects to a think tank — it is not evidence that any
+          organization caused any bill to pass.
+        </ProvenanceBanner>
         <p className="text-xl text-muted max-w-3xl">
           Full pipeline breakdown: which donors influenced which policy papers, whether those papers shaped legislation, and how often each think tank successfully converts advocacy into law.
         </p>

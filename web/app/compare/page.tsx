@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import ProvenanceBadge from "@/components/ProvenanceBadge";
 import { notFound } from "next/navigation";
 import { Entity, Donor, InfluenceLink } from "@/lib/types";
 import Link from "next/link";
@@ -161,6 +162,9 @@ export default async function ComparePage({
       {/* Capture Assessment */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[statsA, statsB].map((stats, idx) => {
+          // A hand-composed heuristic over demonstration data. The weights below
+          // were chosen by hand and never fitted or validated against anything,
+          // so this is labelled in the UI as a demo construct, not a rating.
           const captureScore = (
             (stats.foreignDonorCount > 0 ? 30 : 0) +
             (stats.avgStrength > 0.8 ? 25 : stats.avgStrength > 0.5 ? 15 : 5) +
@@ -173,12 +177,23 @@ export default async function ComparePage({
 
           return (
             <div key={stats.entity.id} className={`rounded-xl border p-6 ${captureColor}`}>
-              <h3 className={`text-lg font-bold ${accentColor} mb-1`}>{stats.entity.name}</h3>
-              <div className="text-3xl font-extrabold mb-2">{captureLevel} CAPTURE RISK</div>
-              <div className="text-sm text-muted">
-                Composite score: {captureScore}/100 — based on foreign funding exposure,
-                donor concentration, lobbying spend, and legislative influence confidence.
+              <div className="flex items-start justify-between gap-3 mb-1">
+                <h3 className={`text-lg font-bold ${accentColor}`}>{stats.entity.name}</h3>
+                <ProvenanceBadge provenance="seeded_demo" size="xs" />
               </div>
+              <div className="text-3xl font-extrabold mb-1">{captureLevel}</div>
+              <div className="text-xs font-semibold uppercase tracking-wider text-muted mb-2">
+                Illustrative capture index
+              </div>
+              <div className="text-sm text-muted">
+                Composite score: {captureScore}/100, combining foreign funding exposure, donor
+                concentration, lobbying spend and average influence strength.
+              </div>
+              <p className="text-xs text-muted/80 mt-3 leading-relaxed">
+                Not a risk rating. The four weights were chosen by hand and never validated, and
+                the inputs are demonstration data. See{" "}
+                <Link href="/methodology" className="underline hover:text-white">methodology</Link>.
+              </p>
             </div>
           );
         })}

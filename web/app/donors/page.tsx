@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { ProvenanceBanner } from "@/components/ProvenanceBadge";
 import { Donor } from "@/lib/types";
 import Link from "next/link";
 import { DollarSign, AlertTriangle, Building2 } from "lucide-react";
@@ -37,6 +38,9 @@ export default async function DonorsPage() {
     <div className="flex flex-col gap-8">
       <div>
         <h1 className="text-4xl font-extrabold tracking-tight mb-2">Donor <span className="text-primary">Database</span></h1>
+        <ProvenanceBanner kinds={["seeded_demo"]}>
+          Every donor row on this page is hand-authored demonstration data. No donor collector is implemented in this project, so these amounts are illustrative and are not drawn from any filing.
+        </ProvenanceBanner>
         <p className="text-muted text-lg max-w-2xl">All tracked donors across every think tank, ranked by contribution amount.</p>
       </div>
 

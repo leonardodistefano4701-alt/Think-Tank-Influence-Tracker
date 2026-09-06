@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import ProvenanceBadge from "@/components/ProvenanceBadge";
 import { Donor } from "@/lib/types";
 import { AlertTriangle, FileText, Building2, Award } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -164,7 +165,8 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
                   <div className="flex flex-col gap-1 items-start text-xs text-muted">
                     <span className="px-2 py-0.5 rounded-sm bg-card-border/50 uppercase font-bold text-[10px] tracking-wider text-white/80">{d.lean}</span>
                     <span className="opacity-80">
-                      {d.year ? `Year: ${d.year}` : 'Year: Unknown'} &bull; Source: {d.source || 'Tax Filings'}
+                      {d.year ? `Year: ${d.year}` : 'Year: Unknown'}
+                      {d.source ? <> &bull; Source: {d.source}</> : null}
                     </span>
                   </div>
                 </div>

@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import { ProvenanceBanner } from "@/components/ProvenanceBadge";
 import { Entity, Donor, InfluenceLink } from "@/lib/types";
 import Link from "next/link";
 import { Building2, DollarSign, Scale, ArrowRight, AlertTriangle } from "lucide-react";
@@ -55,6 +56,9 @@ export default async function ExplorePage() {
       {/* Header */}
       <div className="glass p-8 rounded-2xl">
         <h1 className="text-4xl font-extrabold tracking-tight mb-4">Explore the <span className="text-primary">Network</span></h1>
+        <ProvenanceBanner kinds={["seeded_demo", "ai_generated"]}>
+          Influence links shown here are either hand-authored or asserted by a language model, and their strength values mix three incompatible scales. Bill records are from GovInfo.
+        </ProvenanceBanner>
         <p className="text-xl text-muted max-w-3xl">Trace the full pipeline: from donors to think tanks to policy advocacy to Congressional legislation.</p>
       </div>
 

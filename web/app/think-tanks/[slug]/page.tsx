@@ -255,19 +255,25 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
       {/* ── Foreign Funding Warning ────────────────────────────────── */}
       {foreignDonors.length > 0 && (
         <div className="rounded-xl p-6 bg-red-500/5 border border-red-500/20">
-          <h3 className="text-lg font-bold text-red-400 flex items-center gap-2 mb-3">
-            <AlertTriangle className="w-5 h-5" />
-            Foreign Government Funding Alert
+          <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2 mb-3">
+            <AlertTriangle className="w-5 h-5" aria-hidden="true" />
+            Foreign Government Funding (demonstration data)
           </h3>
+          <p className="text-sm text-muted mb-2">
+            {foreignDonors.length} donor row(s) in this prototype are flagged as foreign
+            government sources. These rows are hand-authored demonstration data, not filings.
+          </p>
           <p className="text-sm text-muted mb-4">
-            This think tank receives funding from {foreignDonors.length} foreign government source(s). Foreign funding of U.S. policy organizations
-            is tracked under FARA (Foreign Agents Registration Act) and raises potential conflicts of interest in domestic policy advocacy.
+            This is not a statement that this organization is registered under, or required to
+            register under, the Foreign Agents Registration Act. No FARA filing has been
+            retrieved or checked by this project. See{" "}
+            <Link href="/methodology" className="text-primary underline">methodology</Link>.
           </p>
           <div className="flex flex-col gap-2">
             {foreignDonors.map(d => (
-              <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-red-500/10">
-                <span className="font-semibold text-red-300">{d.donor_name}</span>
-                <span className="font-bold text-red-400">{formatDollar(d.amount)}</span>
+              <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10">
+                <span className="font-semibold text-amber-200">{d.donor_name}</span>
+                <span className="font-bold text-amber-300">{formatDollar(d.amount)}</span>
               </div>
             ))}
           </div>
