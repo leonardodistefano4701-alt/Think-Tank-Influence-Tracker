@@ -55,8 +55,11 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
   // Find influence links specifically from this donor to policy papers
   // "What did this donor's money influence?"
   // We need to match ANY donor row ID for this donor to influence_links source_id.
-  const donorIds = donations.map(d => `'${d.id}'`).join(',');
-  
+  // Bind the ids as parameters rather than concatenating them into the SQL.
+  // Note the old guard tested the length of the *joined string*, not the array.
+  const donorIds = donations.map(d => d.id);
+  const donorIdPlaceholders = donorIds.map(() => '?').join(',');
+
   let influenceLinks: any[] = [];
   if (donorIds.length > 0) {
     influenceLinks = db.prepare(`
@@ -66,14 +69,24 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
       FROM influence_links il
       JOIN policy_papers pp ON il.target_id = pp.id
       JOIN entities e ON pp.entity_id = e.id
-      WHERE il.source_id IN (${donorIds}) AND il.source_type = 'donor' AND il.target_type = 'policy_paper'
+      WHERE il.source_id IN (${donorIdPlaceholders}) AND il.source_type = 'donor' AND il.target_type = 'policy_paper'
       ORDER BY il.strength DESC, pp.published_date DESC
-    `).all() as any[];
+    `).all(...donorIds) as any[];
   }
   
-  const targetIdStr = donations.length > 0 ? donations[0].id : resolvedParams.id;
-  const verdictRow = db.prepare("SELECT * FROM analysis_verdicts WHERE target_id = ?")
-    .get(targetIdStr) as any | undefined;
+  // Prefer a verdict for the row actually requested. Falling straight to
+  // donations[0] (the largest donation) meant a donor with several rows showed
+  // the wrong row's verdict - or none at all, when only a smaller row had one.
+  const verdictRow = (db
+    .prepare("SELECT * FROM analysis_verdicts WHERE target_id = ?")
+    .get(resolvedParams.id) ??
+    db
+      .prepare(
+        `SELECT * FROM analysis_verdicts
+          WHERE target_id IN (${donorIdPlaceholders})
+          ORDER BY confidence DESC LIMIT 1`
+      )
+      .get(...donorIds)) as any | undefined;
   
   const aiInfo = verdictRow ? {
     verdict: verdictRow.verdict,

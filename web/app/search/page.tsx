@@ -13,10 +13,14 @@ function formatDollar(val: number | null) {
 
 function highlightMatch(text: string, query: string) {
   if (!query || !text) return text;
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  const parts = text.split(regex);
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  // Compare case-insensitively rather than re-testing with a /g/ regex: a
+  // global regex carries lastIndex across .test() calls, so every other match
+  // used to report false and silently lose its highlight.
+  const needle = query.toLowerCase();
   return parts.map((part, i) =>
-    regex.test(part)
+    part.toLowerCase() === needle
       ? <mark key={i} className="bg-primary/30 text-white rounded px-0.5">{part}</mark>
       : part
   );

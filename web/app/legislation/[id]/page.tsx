@@ -1,4 +1,7 @@
 import { getDb } from "@/lib/db";
+
+type ActionRecord = { date?: string; text?: string; type?: string; action_code?: string };
+type RawAction = ActionRecord | string;
 import { Legislation } from "@/lib/types";
 import { Scale, Users, FileText, CheckCircle, Clock, XCircle, TrendingUp, Calendar, ExternalLink, Link2, Building2 } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -39,14 +42,38 @@ export default async function LegislationProfile({ params }: { params: Promise<{
     } catch {}
   }
   
-  let actions = [];
-  try {
-    if (meta.recent_actions && Array.isArray(JSON.parse(meta.recent_actions))) {
-      actions = JSON.parse(meta.recent_actions);
-    } else if (Array.isArray(meta.recent_actions)) {
-      actions = meta.recent_actions;
+  // recent_actions is stored double-encoded (a JSON string inside the metadata
+  // JSON), but tolerate an already-decoded array. The previous version called
+  // JSON.parse inside the `if` condition, so a real array threw straight to
+  // catch and the else-if fallback was unreachable.
+  let actions: RawAction[] = [];
+  const rawActions = meta.recent_actions;
+  if (Array.isArray(rawActions)) {
+    actions = rawActions;
+  } else if (typeof rawActions === "string" && rawActions) {
+    try {
+      const parsed = JSON.parse(rawActions);
+      if (Array.isArray(parsed)) actions = parsed;
+    } catch {
+      actions = [];
     }
-  } catch {}
+  }
+
+  // Older rows stored each action as a single "date: text" string. Normalize
+  // both shapes here so the markup below doesn't have to branch on the type.
+  const normalized: ActionRecord[] = actions.map((entry) => {
+    if (typeof entry === "string") {
+      const [date, ...rest] = entry.split(":");
+      return { date, text: rest.join(":").trim() };
+    }
+    return entry ?? {};
+  });
+
+  // Newest first, without mutating the source array. `.reverse()` mutates in
+  // place, and the stored order is not guaranteed, so sort explicitly.
+  const timeline = [...normalized].sort((a, b) =>
+    String(b?.date ?? "").localeCompare(String(a?.date ?? ""))
+  );
 
   // Find influence links specifically targeting this legislation
   // "Who influenced this bill?"
@@ -272,20 +299,20 @@ export default async function LegislationProfile({ params }: { params: Promise<{
               Recent Actions Timeline
             </h2>
             <div className="space-y-4 relative before:absolute before:inset-0 before:ml-2.5 before:-translate-x-px md:before:mx-auto md:before:translate-x-0 before:h-full before:w-0.5 before:bg-gradient-to-b before:from-transparent before:via-card-border before:to-transparent">
-              {actions.length === 0 ? (
+              {timeline.length === 0 ? (
                 <p className="text-sm text-muted">No timeline actions recorded.</p>
               ) : (
-                actions.reverse().map((action: any, i: number) => (
+                timeline.map((action, i) => (
                   <div key={i} className="relative flex items-center justify-between md:justify-normal md:odd:flex-row-reverse group is-active">
                     {/* Node */}
                     <div className="flex items-center justify-center w-6 h-6 rounded-full border-2 border-primary bg-space-900 shrink-0 md:order-1 md:group-odd:-translate-x-1/2 md:group-even:translate-x-1/2 shadow" />
                     {/* Content */}
                     <div className="w-[calc(100%-2.5rem)] md:w-[calc(50%-1.5rem)] p-3 rounded-lg bg-card-border/20 border border-card-border/50 text-sm">
                       <time className="block text-xs font-bold text-primary mb-1">
-                        {typeof action === 'string' ? action.split(':')[0] : action.date}
+                        {action.date}
                       </time>
                       <div className="text-white/80">
-                        {typeof action === 'string' ? action.split(':').slice(1).join(':') : action.text}
+                        {action.text}
                       </div>
                     </div>
                   </div>

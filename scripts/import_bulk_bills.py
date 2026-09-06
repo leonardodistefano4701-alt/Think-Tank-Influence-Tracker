@@ -7,10 +7,14 @@ import sys, os, uuid, json, sqlite3, urllib.request, zipfile, io, time
 import xml.etree.ElementTree as ET
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'data-pipeline', 'src'))
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from db import get_db
+from bill_status import derive_status, latest_action, most_recent_actions
 
 BULK_BASE = 'https://www.govinfo.gov/bulkdata/BILLSTATUS'
-API_KEY = os.environ.get('FEC_API_KEY', 'kOL6CKT2XB7yJCZXTyoEkfUZ2TacsdRYcp4y8hKI')
+# GovInfo bulkdata does not require a key. GOVINFO_API_KEY is only used for the
+# api.govinfo.gov endpoints, and must come from the environment - never a default.
+API_KEY = os.environ.get('GOVINFO_API_KEY', '')
 
 def uid():
     return str(uuid.uuid4())
@@ -85,38 +89,21 @@ def parse_bill_xml(xml_text):
         date = action.findtext('actionDate') or ''
         text = action.findtext('text') or ''
         action_type = action.findtext('type') or ''
+        action_code = action.findtext('actionCode') or ''
         if text:
-            actions.append({'date': date, 'text': text, 'type': action_type})
+            actions.append({
+                'date': date,
+                'text': text,
+                'type': action_type,
+                'action_code': action_code,
+            })
 
-    # Determine status
-    status = 'Introduced'
-    latest_action_text = ''
-    if actions:
-        latest_action_text = actions[-1]['text']
-        
-        # Check all actions in reverse order to find the highest status achieved
-        for action in reversed(actions):
-            action_lower = action['text'].lower()
-            if 'became public law' in action_lower or 'signed by president' in action_lower:
-                status = 'Signed into Law'
-                break
-            elif 'vetoed' in action_lower or 'failed' in action_lower or 'point of order sustained' in action_lower:
-                status = 'Failed'
-                break
-            elif ('passed senate' in action_lower or 'agreed to in senate' in action_lower) and ('passed house' in action_lower or 'agreed to in house' in action_lower):
-                status = 'Passed Both Chambers'
-                break
-            elif 'passed house' in action_lower or 'agreed to in house' in action_lower:
-                status = 'Passed House'
-                # Don't break, keep looking to see if it was Passed Both Chambers or Signed
-            elif 'passed senate' in action_lower or 'agreed to in senate' in action_lower:
-                status = 'Passed Senate'
-            elif 'reported' in action_lower and status == 'Introduced':
-                status = 'Reported by Committee'
-            elif 'referred to' in action_lower and status == 'Introduced':
-                status = 'In Committee'
-            elif 'committee' in action_lower and status == 'Introduced':
-                status = 'In Committee'
+    # Status is derived by scripts/bill_status.py, which ranks every action
+    # rather than taking the first match while walking the list. BILLSTATUS is
+    # ordered newest-first, so the latest action is never actions[-1].
+    status = derive_status(actions)
+    _latest = latest_action(actions)
+    latest_action_text = _latest['text'] if _latest else ''
 
     # Extract sponsors
     sponsors = []
@@ -159,7 +146,7 @@ def parse_bill_xml(xml_text):
         'cosponsors_count': cosponsors_count,
         'committees': ', '.join(committees),
         'latest_action': latest_action_text,
-        'actions': json.dumps(actions[-5:]),
+        'actions': json.dumps(most_recent_actions(actions, 5)),
     }
 
 
