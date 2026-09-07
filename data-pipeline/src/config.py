@@ -3,7 +3,10 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', '..', 'ttit.db')
+DB_PATH = os.environ.get(
+    'DB_PATH',
+    os.path.join(os.path.dirname(__file__), '..', '..', 'web', 'data', 'ttit.db'),
+)
 
 FEC_API_KEY = os.environ.get("FEC_API_KEY")
 CONGRESS_API_KEY = os.environ.get("CONGRESS_API_KEY")

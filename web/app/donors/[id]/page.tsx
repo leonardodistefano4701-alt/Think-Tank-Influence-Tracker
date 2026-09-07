@@ -1,5 +1,5 @@
 import { getDb } from "@/lib/db";
-import ProvenanceBadge from "@/components/ProvenanceBadge";
+import type { DonationRow, PaperLinkRow, VerdictRow } from "@/lib/rows";
 import { Donor } from "@/lib/types";
 import { AlertTriangle, FileText, Building2, Award } from "lucide-react";
 import { notFound } from "next/navigation";
@@ -8,6 +8,19 @@ import AIVerdictCard from "@/components/AIVerdictCard";
 import React from 'react';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const row = getDb()
+    .prepare("SELECT donor_name FROM donors WHERE id = ?")
+    .get(id) as { donor_name: string | null } | undefined;
+  const name = row?.donor_name;
+  if (!name) return { title: "Not found" };
+  return {
+    title: name,
+    description: `Demonstration donor record for ${name}. Not drawn from any filing.`,
+  };
+}
 
 function formatDollar(val: number | null) {
   if (val == null) return "—";
@@ -36,7 +49,7 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
     JOIN entities e ON d.entity_id = e.id
     WHERE d.donor_name = ?
     ORDER BY d.amount DESC
-  `).all(donorNameMatch) as any[];
+  `).all(donorNameMatch) as DonationRow[];
 
   if (donations.length === 0) return notFound();
 
@@ -61,7 +74,7 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
   const donorIds = donations.map(d => d.id);
   const donorIdPlaceholders = donorIds.map(() => '?').join(',');
 
-  let influenceLinks: any[] = [];
+  let influenceLinks: PaperLinkRow[] = [];
   if (donorIds.length > 0) {
     influenceLinks = db.prepare(`
       SELECT il.*, 
@@ -72,7 +85,7 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
       JOIN entities e ON pp.entity_id = e.id
       WHERE il.source_id IN (${donorIdPlaceholders}) AND il.source_type = 'donor' AND il.target_type = 'policy_paper'
       ORDER BY il.strength DESC, pp.published_date DESC
-    `).all(...donorIds) as any[];
+    `).all(...donorIds) as PaperLinkRow[];
   }
   
   // Prefer a verdict for the row actually requested. Falling straight to
@@ -87,7 +100,7 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
           WHERE target_id IN (${donorIdPlaceholders})
           ORDER BY confidence DESC LIMIT 1`
       )
-      .get(...donorIds)) as any | undefined;
+      .get(...donorIds)) as VerdictRow | undefined;
   
   const aiInfo = verdictRow ? {
     verdict: verdictRow.verdict,

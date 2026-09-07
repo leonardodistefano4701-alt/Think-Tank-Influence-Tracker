@@ -4,20 +4,20 @@ import { Bot, AlertCircle } from 'lucide-react';
 import ProvenanceBadge from '@/components/ProvenanceBadge';
 
 interface AIAnalysisProps {
-  verdict?: string;
-  reasoning?: string;
-  evidenceSummary?: string;
-  confidence?: number;
-  modelUsed?: string;
+  verdict?: string | null;
+  reasoning?: string | null;
+  evidenceSummary?: string | null;
+  confidence?: number | null;
+  modelUsed?: string | null;
 }
 
 export default function AIVerdictCard({ info }: { info: AIAnalysisProps | null }) {
   if (!info) return null;
 
   const confidencePct = Math.round((info.confidence || 0) * 100);
-  let auraColor = 'from-primary/20 via-primary/5 to-transparent border-primary/30';
-  let badgeColor = 'bg-primary/20 text-primary border-primary/30';
-  let iconColor = 'text-primary';
+  const auraColor = 'from-primary/20 via-primary/5 to-transparent border-primary/30';
+  const badgeColor = 'bg-primary/20 text-primary border-primary/30';
+  const iconColor = 'text-primary';
 
   // Deliberately flat. A high model-confidence number is not stronger evidence,
   // and colour-grading it purple above 85% gave unverified output the visual

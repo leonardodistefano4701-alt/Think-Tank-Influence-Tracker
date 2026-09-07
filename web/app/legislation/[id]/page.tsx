@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import type { PaperLinkRow, VerdictRow, LegislationMeta } from "@/lib/rows";
 
 type ActionRecord = { date?: string; text?: string; type?: string; action_code?: string };
 type RawAction = ActionRecord | string;
@@ -10,6 +11,21 @@ import AIVerdictCard from "@/components/AIVerdictCard";
 import React from 'react';
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  const searchId = decodeURIComponent(id);
+  const row = getDb()
+    .prepare("SELECT bill_id, title, status FROM legislation WHERE id = ? OR bill_id = ?")
+    .get(searchId, searchId) as
+    | { bill_id: string | null; title: string | null; status: string | null }
+    | undefined;
+  if (!row) return { title: "Not found" };
+  return {
+    title: row.bill_id ? `${row.bill_id} — ${row.title ?? "Untitled bill"}` : row.title,
+    description: `Status: ${row.status ?? "unknown"}. Policy papers and influence links tracked against this bill.`,
+  };
+}
 
 function statusIcon(status: string) {
   if (status === 'Signed into Law') return <CheckCircle className="w-5 h-5 text-green-400" />;
@@ -35,7 +51,7 @@ export default async function LegislationProfile({ params }: { params: Promise<{
   const bill = db.prepare("SELECT * FROM legislation WHERE id = ? OR bill_id = ?").get(searchId, searchId) as Legislation | undefined;
   if (!bill) return notFound();
   
-  let meta: any = {};
+  let meta: LegislationMeta = {};
   if (bill.metadata) {
     try {
       meta = JSON.parse(bill.metadata);
@@ -86,10 +102,10 @@ export default async function LegislationProfile({ params }: { params: Promise<{
     JOIN entities e ON pp.entity_id = e.id
     WHERE il.target_id = ? AND il.target_type = 'legislation' AND il.source_type = 'policy_paper'
     ORDER BY il.strength DESC, pp.published_date DESC
-  `).all(bill.id) as any[];
+  `).all(bill.id) as PaperLinkRow[];
 
   const verdictRow = db.prepare("SELECT * FROM analysis_verdicts WHERE target_id = ?")
-    .get(bill.id) as any | undefined;
+    .get(bill.id) as VerdictRow | undefined;
   
   const aiInfo = verdictRow ? {
     verdict: verdictRow.verdict,

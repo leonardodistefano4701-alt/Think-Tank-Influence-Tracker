@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import type { VerdictRow } from "@/lib/rows";
 import { Entity, Financial, Donor, InfluenceLink, PolicyPaper, Lobbying } from "@/lib/types";
 import FinancialBreakdown from "@/components/FinancialBreakdown";
 import { Building2, DollarSign, AlertTriangle, Scale, Globe, FileText, Link2, ShieldAlert } from "lucide-react";
@@ -8,6 +9,20 @@ import AIVerdictCard from "@/components/AIVerdictCard";
 import PolicyPaperCard from "@/components/PolicyPaperCard";
 
 export const dynamic = 'force-dynamic';
+
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const row = getDb()
+    .prepare("SELECT name, description FROM entities WHERE slug = ?")
+    .get(slug) as { name: string; description: string | null } | undefined;
+  if (!row) return { title: "Not found" };
+  return {
+    title: row.name,
+    description:
+      row.description ??
+      `Funding, policy output and legislative links tracked for ${row.name}.`,
+  };
+}
 
 function formatDollar(val: number | null) {
   if (val == null) return "—";
@@ -41,7 +56,7 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
   const lobbying = db.prepare("SELECT * FROM lobbying WHERE client_entity_id = ? ORDER BY filing_year DESC").all(entity.id) as Lobbying[];
 
   const verdictRow = db.prepare("SELECT * FROM analysis_verdicts WHERE target_id = ?")
-    .get(entity.id) as any | undefined;
+    .get(entity.id) as VerdictRow | undefined;
   
   const aiInfo = verdictRow ? {
     verdict: verdictRow.verdict,

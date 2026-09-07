@@ -14,7 +14,10 @@
 
   --color-accent: #3b82f6;
 
-  --color-muted: #737373;
+  /* #737373 on #000 is 4.43:1, below the 4.5:1 WCAG AA threshold - and this is
+     the most-used text colour on the site, frequently at text-xs. #8f8f8f is
+     6.49:1, which also leaves headroom for the /70 and /80 opacity variants. */
+  --color-muted: #8f8f8f;
 }
 
 body {
@@ -31,4 +34,25 @@ body {
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Visible keyboard focus. There were no focus styles at all, so keyboard users
+   could not tell where they were on the page. */
+:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Respect a reduced-motion preference: the app uses animate-ping,
+   animate-pulse and animate-spin unconditionally. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

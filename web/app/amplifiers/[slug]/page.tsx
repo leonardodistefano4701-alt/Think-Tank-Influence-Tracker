@@ -5,6 +5,18 @@ import { notFound } from "next/navigation";
 
 export const dynamic = 'force-dynamic';
 
+export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }) {
+  const { slug } = await params;
+  const row = getDb()
+    .prepare("SELECT name, description FROM entities WHERE slug = ?")
+    .get(slug) as { name: string; description: string | null } | undefined;
+  if (!row) return { title: "Not found" };
+  return {
+    title: row.name,
+    description: row.description ?? `Media amplification patterns tracked for ${row.name}.`,
+  };
+}
+
 export default async function AmplifierProfile({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
   const db = getDb();

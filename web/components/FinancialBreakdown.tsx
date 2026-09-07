@@ -36,7 +36,7 @@ export default function FinancialBreakdown({ financials }: { financials: Financi
             <YAxis stroke="#737373" tickFormatter={formatDollar} />
             <Tooltip 
               contentStyle={{ backgroundColor: '#0a0a0a', border: '1px solid #262626' }}
-              formatter={(value: any) => formatDollar(value as number)}
+              formatter={(value) => formatDollar(Number(value ?? 0))}
             />
             <Legend />
             <Bar dataKey="Revenue" fill="#10b981" radius={[4, 4, 0, 0]} />

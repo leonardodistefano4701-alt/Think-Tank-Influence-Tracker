@@ -37,7 +37,7 @@ from bill_status import derive_status, latest_action, most_recent_actions  # noq
 
 BULK_BASE = "https://www.govinfo.gov/bulkdata/BILLSTATUS"
 DB_PATH = os.environ.get(
-    "DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ttit.db")
+    "DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "data", "ttit.db")
 )
 USER_AGENT = "TTIT-research/1.0 (+https://github.com/leonardodistefano4701-alt/Think-Tank-Influence-Tracker)"
 

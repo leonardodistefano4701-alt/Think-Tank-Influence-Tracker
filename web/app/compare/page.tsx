@@ -1,7 +1,8 @@
 import { getDb } from "@/lib/db";
+import type { LegislationLinkRow, DonationRow } from "@/lib/rows";
 import ProvenanceBadge from "@/components/ProvenanceBadge";
 import { notFound } from "next/navigation";
-import { Entity, Donor, InfluenceLink } from "@/lib/types";
+import { Entity, InfluenceLink } from "@/lib/types";
 import Link from "next/link";
 import CompareSelector from "@/components/CompareSelector";
 import { FileText, Scale } from "lucide-react";
@@ -26,12 +27,12 @@ interface TankStats {
   latestRevenue: number | null;
   topDonor: string;
   topDonorAmount: number;
-  detailedLegislation: any[];
-  detailedDonors: any[];
+  detailedLegislation: LegislationLinkRow[];
+  detailedDonors: DonationRow[];
 }
 
-function getStats(db: any, entity: Entity): TankStats {
-  const donors = db.prepare("SELECT * FROM donors WHERE entity_id = ? ORDER BY amount DESC").all(entity.id) as Donor[];
+function getStats(db: ReturnType<typeof getDb>, entity: Entity): TankStats {
+  const donors = db.prepare("SELECT * FROM donors WHERE entity_id = ? ORDER BY amount DESC").all(entity.id) as DonationRow[];
   const links = db.prepare("SELECT * FROM influence_links WHERE source_id = ? AND source_type = 'think_tank'").all(entity.id) as InfluenceLink[];
   const paperCount = db.prepare("SELECT COUNT(*) as cnt FROM policy_papers WHERE entity_id = ?").get(entity.id) as { cnt: number };
   const lobbyTotal = db.prepare("SELECT SUM(amount) as total FROM lobbying WHERE client_entity_id = ?").get(entity.id) as { total: number | null };
@@ -46,7 +47,7 @@ function getStats(db: any, entity: Entity): TankStats {
     WHERE pp.entity_id = ? AND il.target_type = 'legislation'
     GROUP BY l.id
     ORDER BY il.strength DESC LIMIT 5
-  `).all(entity.id) as any[];
+  `).all(entity.id) as LegislationLinkRow[];
 
   const foreignDonors = donors.filter(d => d.is_foreign_govt === 1);
   const totalDonations = donors.reduce((s, d) => s + (d.amount || 0), 0);
@@ -224,7 +225,7 @@ function DetailedPanel({ stats, accentColor, borderAccent }: { stats: TankStats;
           <p className="text-xs text-muted italic">No specific legislation targets tracked yet.</p>
         ) : (
           <div className="flex flex-col gap-4">
-            {stats.detailedLegislation.map((leg: any, idx) => (
+            {stats.detailedLegislation.map((leg, idx) => (
               <div key={leg.id || idx} className="bg-card-border/20 p-4 rounded-lg flex flex-col gap-2">
                 <div className="flex justify-between items-start gap-2">
                   <Link href={`/legislation/${leg.id}`} className="font-semibold text-white hover:text-primary transition-colors leading-tight">
@@ -256,7 +257,7 @@ function DetailedPanel({ stats, accentColor, borderAccent }: { stats: TankStats;
           <p className="text-xs text-muted italic">No specific donors tracked yet.</p>
         ) : (
           <div className="flex flex-col gap-3">
-            {stats.detailedDonors.map((d: any, idx: number) => (
+            {stats.detailedDonors.map((d, idx: number) => (
               <div key={d.id || idx} className="bg-card-border/20 p-3 rounded-lg flex flex-col gap-1.5 border-l-2 border-l-green-500/50">
                 <div className="flex justify-between items-center">
                   <span className="font-bold text-sm text-white">{d.donor_name}</span>

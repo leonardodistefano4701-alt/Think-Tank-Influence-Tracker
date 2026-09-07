@@ -28,7 +28,7 @@ import sqlite3
 import sys
 
 DB_PATH = os.environ.get(
-    "DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "ttit.db")
+    "DB_PATH", os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "web", "data", "ttit.db")
 )
 
 VERIFIED = "verified_filing"

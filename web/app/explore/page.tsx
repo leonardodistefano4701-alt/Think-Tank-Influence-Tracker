@@ -11,7 +11,12 @@ function formatDollar(val: number | null) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(val);
 }
 
-export default async function ExplorePage() {
+export default async function ExplorePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const resolvedParams = await searchParams;
   const db = getDb();
 
   const entities = db.prepare("SELECT * FROM entities WHERE type = 'think_tank'").all() as Entity[];
@@ -45,7 +50,26 @@ export default async function ExplorePage() {
     LIMIT 15
   `).all() as (Donor & { tank_name: string; tank_slug: string })[];
 
-  const legislation = db.prepare("SELECT * FROM legislation ORDER BY introduced_date DESC").all() as {
+  // Paginated. This was previously an unbounded SELECT * over 20,428 rows,
+  // all of which were rendered on every request under force-dynamic - roughly
+  // 44 MB of HTML per page view.
+  const PAGE_SIZE = 25;
+  const page = Math.max(1, Number.parseInt(resolvedParams.page ?? "1", 10) || 1);
+
+  const { total } = db
+    .prepare("SELECT COUNT(*) as total FROM legislation")
+    .get() as { total: number };
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const currentPage = Math.min(page, pageCount);
+
+  const legislation = db
+    .prepare(
+      `SELECT id, bill_id, title, congress, chamber, status, summary, introduced_date
+         FROM legislation
+        ORDER BY introduced_date DESC, bill_id DESC
+        LIMIT ? OFFSET ?`
+    )
+    .all(PAGE_SIZE, (currentPage - 1) * PAGE_SIZE) as {
     id: string; bill_id: string; title: string; congress: number; chamber: string; status: string; summary: string; introduced_date: string
   }[];
 
@@ -145,7 +169,7 @@ export default async function ExplorePage() {
                     )}
                   </div>
                   <div className="text-xs text-muted mt-1">
-                    → <Link prefetch={false} href={`/think-tanks/${(d as any).tank_slug}`} className="text-primary hover:underline">{(d as any).tank_name}</Link>
+                    → <Link prefetch={false} href={`/think-tanks/${d.tank_slug}`} className="text-primary hover:underline">{d.tank_name}</Link>
                   </div>
                   <div className="text-[10px] text-muted/60 mt-0.5">{d.industry}</div>
                 </div>
@@ -159,8 +183,11 @@ export default async function ExplorePage() {
       {/* ── Tracked Legislation ─────────────────────────────────────── */}
       <div className="glass p-6 rounded-2xl">
         <h2 className="text-2xl font-bold mb-6 flex items-center gap-2">
-          <Scale className="w-6 h-6 text-blue-400" />
+          <Scale className="w-6 h-6 text-blue-400" aria-hidden="true" />
           Tracked Legislation
+          <span className="text-sm font-normal text-muted">
+            ({total.toLocaleString()} bills)
+          </span>
         </h2>
         <div className="flex flex-col gap-3">
           {legislation.map(leg => (
@@ -181,6 +208,35 @@ export default async function ExplorePage() {
             </div>
           ))}
         </div>
+
+        <nav
+          aria-label="Legislation pagination"
+          className="flex items-center justify-between gap-4 mt-6 pt-4 border-t border-card-border"
+        >
+          {currentPage > 1 ? (
+            <Link
+              href={`/explore?page=${currentPage - 1}`}
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              &larr; Previous
+            </Link>
+          ) : (
+            <span className="text-sm text-muted/50">&larr; Previous</span>
+          )}
+          <span className="text-sm text-muted tabular-nums">
+            Page {currentPage.toLocaleString()} of {pageCount.toLocaleString()}
+          </span>
+          {currentPage < pageCount ? (
+            <Link
+              href={`/explore?page=${currentPage + 1}`}
+              className="text-sm font-semibold text-primary hover:underline"
+            >
+              Next &rarr;
+            </Link>
+          ) : (
+            <span className="text-sm text-muted/50">Next &rarr;</span>
+          )}
+        </nav>
       </div>
     </div>
   );

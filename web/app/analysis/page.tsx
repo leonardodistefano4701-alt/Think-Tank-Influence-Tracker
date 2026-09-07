@@ -1,4 +1,5 @@
 import { getDb } from "@/lib/db";
+import type { UnknownRow, PolicyPaperRow, LegislationLinkRow, DonationRow } from "@/lib/rows";
 import { ProvenanceBanner } from "@/components/ProvenanceBadge";
 import Link from "next/link";
 import { TrendingUp, AlertTriangle, CheckCircle, XCircle, Clock, DollarSign, FileText, Scale, ChevronRight } from "lucide-react";
@@ -24,24 +25,26 @@ function statusColor(status: string) {
   return 'bg-gray-500/20 text-gray-400';
 }
 
+// Nullable to match the schema. These columns really are nullable, and the
+// previous non-null declarations were assertions the database never honoured.
 interface DonorChain {
   donor_id: string;
-  donor_name: string;
-  donor_amount: number;
-  donor_industry: string;
-  is_foreign_govt: number;
-  donor_to_paper_strength: number;
-  donor_to_paper_evidence: string;
-  paper_title: string;
-  paper_summary?: string;
+  donor_name: string | null;
+  donor_amount: number | null;
+  donor_industry: string | null;
+  is_foreign_govt: number | null;
+  donor_to_paper_strength: number | null;
+  donor_to_paper_evidence: string | null;
+  paper_title: string | null;
+  paper_summary?: string | null;
   paper_to_leg_strength: number | null;
   paper_to_leg_evidence: string | null;
   leg_id: string | null;
   leg_title: string | null;
   leg_bill_id: string | null;
   leg_status: string | null;
-  tank_name: string;
-  tank_slug: string;
+  tank_name: string | null;
+  tank_slug: string | null;
 }
 
 interface TankAnalysis {
@@ -68,13 +71,13 @@ export default async function AnalysisPage() {
   const db = getDb();
 
   // Get all think tanks
-  const tanks = db.prepare("SELECT * FROM entities WHERE type = 'think_tank' ORDER BY name").all() as any[];
+  const tanks = db.prepare("SELECT * FROM entities WHERE type = 'think_tank' ORDER BY name").all() as (UnknownRow & { id: string; name: string; slug: string; lean: string | null })[];
 
   const tankAnalyses: TankAnalysis[] = [];
 
   for (const tank of tanks) {
     // Get all policy papers for this tank
-    const papers = db.prepare("SELECT * FROM policy_papers WHERE entity_id = ?").all(tank.id) as any[];
+    const papers = db.prepare("SELECT * FROM policy_papers WHERE entity_id = ?").all(tank.id) as PolicyPaperRow[];
 
     // For each paper, find policy → legislation links
     let signedIntoLaw = 0;
@@ -84,7 +87,7 @@ export default async function AnalysisPage() {
     let opposed = 0;
     let papersWithLegislation = 0;
 
-    const paperLegLinks: Map<string, any[]> = new Map();
+    const paperLegLinks: Map<string, LegislationLinkRow[]> = new Map();
 
     for (const paper of papers) {
       const links = db.prepare(`
@@ -92,7 +95,7 @@ export default async function AnalysisPage() {
         FROM influence_links il
         JOIN legislation l ON il.target_id = l.id
         WHERE il.source_type = 'policy_paper' AND il.source_id = ?
-      `).all(paper.id) as any[];
+      `).all(paper.id) as LegislationLinkRow[];
 
       if (links.length > 0) papersWithLegislation++;
       paperLegLinks.set(paper.id, links);
@@ -118,7 +121,7 @@ export default async function AnalysisPage() {
       JOIN donors d ON il.source_id = d.id
       WHERE il.source_type = 'donor' AND il.target_type = 'policy_paper'
         AND il.target_id IN (SELECT id FROM policy_papers WHERE entity_id = ?)
-    `).all(tank.id) as any[];
+    `).all(tank.id) as (DonationRow & { paper_id: string; strength: number | null; evidence: string | null; donor_id: string })[];
 
     let totalDonorInfluence = 0;
     let foreignDonorLinks = 0;
@@ -357,7 +360,7 @@ export default async function AnalysisPage() {
                       <div className="text-xs text-muted">{chain.donor_industry}</div>
                     </div>
                     <div className="text-xs text-muted">
-                      influence: <span className="font-bold text-white">{Math.round(chain.donor_to_paper_strength * 100)}%</span>
+                      influence: <span className="font-bold text-white">{Math.round((chain.donor_to_paper_strength || 0) * 100)}%</span>
                     </div>
                   </div>
 

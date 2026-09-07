@@ -1,4 +1,6 @@
 import { getDb } from "@/lib/db";
+import type { GrantRow, ContractRow, DonorAggregateRow } from "@/lib/rows";
+import ProvenanceBadge from "@/components/ProvenanceBadge";
 import Link from "next/link";
 import { Building2, DollarSign, Landmark, Briefcase, Users } from "lucide-react";
 
@@ -20,24 +22,25 @@ export default async function GrantsPage() {
     JOIN entities e ON f.entity_id = e.id
     WHERE f.contributions_and_grants IS NOT NULL AND f.contributions_and_grants > 0
     ORDER BY f.contributions_and_grants DESC
-  `).all() as any[];
+  `).all() as GrantRow[];
 
   // Get latest year per tank for grant ranking
-  const latestGrantByTank = new Map<string, any>();
+  const latestGrantByTank = new Map<string, GrantRow>();
   for (const g of grantData) {
+    if (!g.tank_slug) continue;
     const existing = latestGrantByTank.get(g.tank_slug);
-    if (!existing || g.fiscal_year > existing.fiscal_year) {
+    if (!existing || (g.fiscal_year ?? 0) > (existing.fiscal_year ?? 0)) {
       latestGrantByTank.set(g.tank_slug, g);
     }
   }
   const grantRankings = [...latestGrantByTank.values()].sort((a, b) => (b.contributions_and_grants || 0) - (a.contributions_and_grants || 0));
 
-  const totalGrants = grantRankings.reduce((s: number, g: any) => s + (g.contributions_and_grants || 0), 0);
-  const totalRevenue = grantRankings.reduce((s: number, g: any) => s + (g.total_revenue || 0), 0);
+  const totalGrants = grantRankings.reduce((s: number, g: GrantRow) => s + (g.contributions_and_grants || 0), 0);
+  const totalRevenue = grantRankings.reduce((s: number, g: GrantRow) => s + (g.total_revenue || 0), 0);
   const avgDependency = totalRevenue > 0 ? Math.round((totalGrants / totalRevenue) * 100) : 0;
 
   // ── Government Contracts ───────────────────────────────────────────
-  let contracts: any[] = [];
+  let contracts: ContractRow[] = [];
   let totalContractValue = 0;
   try {
     contracts = db.prepare(`
@@ -45,8 +48,8 @@ export default async function GrantsPage() {
       FROM govt_contracts gc
       LEFT JOIN entities e ON gc.recipient_entity_id = e.id
       ORDER BY gc.amount DESC
-    `).all() as any[];
-    totalContractValue = contracts.reduce((s: number, c: any) => s + (c.amount || 0), 0);
+    `).all() as ContractRow[];
+    totalContractValue = contracts.reduce((s: number, c) => s + (c.amount || 0), 0);
   } catch { /* table may be empty */ }
 
   // ── Top Donors by source=irs_990 ───────────────────────────────────
@@ -54,11 +57,10 @@ export default async function GrantsPage() {
     SELECT d.donor_name, SUM(d.amount) as total_given, COUNT(DISTINCT d.entity_id) as tanks_funded,
            d.industry, MAX(d.year) as latest_year
     FROM donors d
-    WHERE d.source = 'irs_990'
     GROUP BY d.donor_name
     ORDER BY total_given DESC
     LIMIT 15
-  `).all() as any[];
+  `).all() as DonorAggregateRow[];
 
   return (
     <div className="flex flex-col gap-8">
@@ -117,9 +119,12 @@ export default async function GrantsPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {grantRankings.map((g, i) => {
-              const grantPct = g.total_revenue > 0 ? Math.round((g.contributions_and_grants / g.total_revenue) * 100) : 0;
+              const revenue = g.total_revenue ?? 0;
+              const grants = g.contributions_and_grants ?? 0;
+              // Clamped: the value is used directly as a CSS width below.
+              const grantPct = revenue > 0 ? Math.min(100, Math.round((grants / revenue) * 100)) : 0;
               return (
-                <div key={g.tank_slug} className="p-4 rounded-lg bg-card-border/20 hover:bg-card-border/40 transition-colors">
+                <div key={g.tank_slug ?? i} className="p-4 rounded-lg bg-card-border/20 hover:bg-card-border/40 transition-colors">
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-3">
                       <span className="text-xs font-mono text-muted">#{i + 1}</span>
@@ -156,14 +161,14 @@ export default async function GrantsPage() {
       <div className="glass p-6 rounded-2xl">
         <h2 className="text-2xl font-bold mb-5 flex items-center gap-2">
           <DollarSign className="w-6 h-6 text-green-400" />
-          Top Foundation & Corporate Donors
-          <span className="px-2 py-0.5 text-xs bg-green-500/20 text-green-400 rounded-md font-bold uppercase tracking-wider">Cross-Tank</span>
+          Top Foundation &amp; Corporate Donors
+          <ProvenanceBadge provenance="seeded_demo" size="xs" />
         </h2>
         {topFoundationDonors.length === 0 ? (
-          <div className="text-muted italic text-sm">No donor data from IRS 990 sources available.</div>
+          <div className="text-muted italic text-sm">No donor data available.</div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {topFoundationDonors.map((d: any, i: number) => (
+            {topFoundationDonors.map((d, i: number) => (
               <div key={d.donor_name} className="p-4 rounded-lg bg-card-border/20 hover:bg-card-border/40 transition-colors">
                 <div className="flex items-start justify-between mb-1">
                   <div className="flex-1 min-w-0">
@@ -196,8 +201,8 @@ export default async function GrantsPage() {
             Federal contracts awarded to tracked entities — a potential conflict of interest when the same organizations influence the policies they receive contracts under.
           </p>
           <div className="flex flex-col gap-2">
-            {contracts.slice(0, 20).map((c: any, i: number) => (
-              <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-card-border/20 hover:bg-card-border/30 transition-colors text-sm">
+            {contracts.slice(0, 20).map((c, i: number) => (
+              <div key={String(c.id ?? i)} className="flex items-center justify-between p-3 rounded-lg bg-card-border/20 hover:bg-card-border/30 transition-colors text-sm">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <span className="text-xs font-mono text-muted w-5 text-right">#{i + 1}</span>
                   <div className="flex-1 min-w-0">

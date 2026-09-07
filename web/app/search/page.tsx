@@ -1,5 +1,6 @@
 import { getDb } from "@/lib/db";
-import { Entity, Donor } from "@/lib/types";
+import type { LegislationRow, PolicyPaperRow, LobbyingRow, InfluenceLinkRow, DonationRow } from "@/lib/rows";
+import { Entity } from "@/lib/types";
 import ProfileCard from "@/components/ProfileCard";
 import Link from "next/link";
 import { Search, DollarSign, FileText, Scale, Building2, Link2, Megaphone } from "lucide-react";
@@ -11,8 +12,8 @@ function formatDollar(val: number | null) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(val);
 }
 
-function highlightMatch(text: string, query: string) {
-  if (!query || !text) return text;
+function highlightMatch(text: string | null | undefined, query: string) {
+  if (!query || !text) return text ?? null;
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
   // Compare case-insensitively rather than re-testing with a /g/ regex: a
@@ -66,7 +67,7 @@ export default async function SearchPage({
   }
 
   // ── Donor search ─────────────────────────────────────────────────
-  let donors: (Donor & { tank_name: string; tank_slug: string })[] = [];
+  let donors: DonationRow[] = [];
   if (q) {
     donors = db.prepare(`
       SELECT d.*, e.name as tank_name, e.slug as tank_slug
@@ -75,11 +76,11 @@ export default async function SearchPage({
       WHERE d.donor_name LIKE ? OR d.industry LIKE ? OR d.source LIKE ?
       ORDER BY d.amount DESC
       LIMIT 20
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as any[];
+    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as DonationRow[];
   }
 
   // ── Legislation search (FTS5 powered) ─────────────────────────────
-  let legislation: any[] = [];
+  let legislation: LegislationRow[] = [];
   if (q) {
     if (hasFts) {
       try {
@@ -89,17 +90,17 @@ export default async function SearchPage({
           WHERE search_legislation MATCH ?
           ORDER BY sl.rank
           LIMIT 30
-        `).all(ftsQuery) as any[];
+        `).all(ftsQuery) as LegislationRow[];
       } catch {
-        legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as any[];
+        legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as LegislationRow[];
       }
     } else {
-      legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as any[];
+      legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as LegislationRow[];
     }
   }
 
   // ── Policy Paper search ──────────────────────────────────────────
-  let papers: any[] = [];
+  let papers: PolicyPaperRow[] = [];
   if (q) {
     papers = db.prepare(`
       SELECT pp.*, e.name as tank_name, e.slug as tank_slug
@@ -108,11 +109,11 @@ export default async function SearchPage({
       WHERE pp.title LIKE ? OR pp.summary LIKE ? OR pp.topic_tags LIKE ?
       ORDER BY pp.published_date DESC
       LIMIT 20
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as any[];
+    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as PolicyPaperRow[];
   }
 
   // ── Lobbying search ──────────────────────────────────────────────
-  let lobbying: any[] = [];
+  let lobbying: LobbyingRow[] = [];
   if (q) {
     lobbying = db.prepare(`
       SELECT lb.*, e.name as tank_name, e.slug as tank_slug
@@ -121,11 +122,11 @@ export default async function SearchPage({
       WHERE lb.registrant_name LIKE ? OR lb.issue_description LIKE ? OR lb.client_name LIKE ?
       ORDER BY lb.amount DESC
       LIMIT 20
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as any[];
+    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as LobbyingRow[];
   }
 
   // ── Influence links search ───────────────────────────────────────
-  let influenceLinks: any[] = [];
+  let influenceLinks: InfluenceLinkRow[] = [];
   if (q) {
     influenceLinks = db.prepare(`
       SELECT il.*, 
@@ -140,7 +141,7 @@ export default async function SearchPage({
       WHERE il.evidence LIKE ? OR il.link_type LIKE ?
       ORDER BY il.strength DESC
       LIMIT 20
-    `).all(`%${q}%`, `%${q}%`) as any[];
+    `).all(`%${q}%`, `%${q}%`) as InfluenceLinkRow[];
   }
 
   const totalResults = entities.length + donors.length + legislation.length + papers.length + lobbying.length + influenceLinks.length;
