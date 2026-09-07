@@ -1,39 +1,105 @@
 import { getDb } from "@/lib/db";
-import { Entity } from "@/lib/types";
-import ProfileCard from "@/components/ProfileCard";
 import SearchBar from "@/components/SearchBar";
+import { Page, PageHeader, Section, A, Badge } from "@/components/ui";
 
-export const dynamic = 'force-dynamic';
+export const dynamic = "force-dynamic";
+
+function formatDollar(v: number | null) {
+  if (!v) return "—";
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(v);
+}
+
+type Row = {
+  id: string;
+  name: string;
+  slug: string;
+  lean: string | null;
+  donor_total: number | null;
+  donor_count: number | null;
+  paper_count: number | null;
+  link_count: number | null;
+};
 
 export default async function Home() {
   const db = getDb();
-  const thinkTanks = db.prepare("SELECT * FROM entities WHERE type = 'think_tank'").all() as Entity[];
-  
-  return (
-    <div className="flex flex-col items-center gap-12 py-12">
-      <div className="text-center max-w-3xl flex flex-col gap-4">
-        <h1 className="text-5xl md:text-6xl font-extrabold tracking-tight">
-          Trace the <span className="text-primary">Pipeline</span>.
-        </h1>
-        <p className="text-xl text-muted">
-          Follow the money. Track the policy. Expose the structural capture of political decisions.
-        </p>
-      </div>
 
-      <div className="w-full max-w-2xl">
+  // One query rather than a card grid of empty descriptions: the landing page
+  // should show the data, not an invitation to go looking for it.
+  const tanks = db
+    .prepare(
+      `SELECT e.id, e.name, e.slug, e.lean,
+              (SELECT SUM(d.amount) FROM donors d WHERE d.entity_id = e.id)  AS donor_total,
+              (SELECT COUNT(*)      FROM donors d WHERE d.entity_id = e.id)  AS donor_count,
+              (SELECT COUNT(*)      FROM policy_papers p WHERE p.entity_id = e.id) AS paper_count,
+              (SELECT COUNT(*) FROM influence_links il
+                 WHERE il.source_type = 'policy_paper'
+                   AND il.source_id IN (SELECT id FROM policy_papers WHERE entity_id = e.id)) AS link_count
+         FROM entities e
+        WHERE e.type = 'think_tank'
+        ORDER BY donor_total DESC`
+    )
+    .all() as Row[];
+
+  return (
+    <Page>
+      <PageHeader
+        title="Think Tank Influence Tracker"
+        description="Tracing funding, policy output and legislation across six US think tanks and two media commentators. A student research prototype — much of the data below is demonstration data, labelled throughout."
+      />
+
+      <div className="max-w-xl">
         <SearchBar />
       </div>
 
-      <div className="w-full mt-8">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold tracking-tight">Tracked Think Tanks</h2>
+      <Section
+        title="Tracked organizations"
+        description="Donation totals are demonstration data. Paper and legislation counts come from the database."
+      >
+        <div className="overflow-x-auto border border-border rounded-md bg-surface">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="text-left text-xs text-muted border-b border-border">
+                <th scope="col" className="font-medium px-4 py-2.5">Organization</th>
+                <th scope="col" className="font-medium px-4 py-2.5">Lean</th>
+                <th scope="col" className="font-medium px-4 py-2.5 text-right">Tracked donations</th>
+                <th scope="col" className="font-medium px-4 py-2.5 text-right">Donors</th>
+                <th scope="col" className="font-medium px-4 py-2.5 text-right">Papers</th>
+                <th scope="col" className="font-medium px-4 py-2.5 text-right">Bill links</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tanks.map((t) => (
+                <tr key={t.id} className="border-b border-border last:border-0">
+                  <td className="px-4 py-2.5">
+                    <A href={`/think-tanks/${t.slug}`} className="font-medium">
+                      {t.name}
+                    </A>
+                  </td>
+                  <td className="px-4 py-2.5">
+                    {t.lean ? <Badge>{t.lean}</Badge> : <span className="text-muted">—</span>}
+                  </td>
+                  <td className="px-4 py-2.5 text-right tnum">{formatDollar(t.donor_total)}</td>
+                  <td className="px-4 py-2.5 text-right tnum text-muted">{t.donor_count ?? 0}</td>
+                  <td className="px-4 py-2.5 text-right tnum text-muted">{t.paper_count ?? 0}</td>
+                  <td className="px-4 py-2.5 text-right tnum text-muted">{t.link_count ?? 0}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {thinkTanks.map(tt => (
-            <ProfileCard key={tt.id} entity={tt} />
-          ))}
-        </div>
-      </div>
-    </div>
+      </Section>
+
+      <Section title="Media amplifiers">
+        <p className="text-sm text-muted">
+          Two commentators are tracked alongside the organizations.{" "}
+          <A href="/amplifiers">See amplifiers</A>.
+        </p>
+      </Section>
+    </Page>
   );
 }

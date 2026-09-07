@@ -1,23 +1,23 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { Source_Serif_4, Inter } from "next/font/google";
 import "./globals.css";
 import Link from "next/link";
-import { Activity } from "lucide-react";
 
-const inter = Inter({ subsets: ["latin"] });
+const inter = Inter({ subsets: ["latin"], variable: "--font-sans", display: "swap" });
+const serif = Source_Serif_4({ subsets: ["latin"], variable: "--font-serif", display: "swap" });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://think-tank-influence-tracker.vercel.app"),
+  metadataBase: new URL("https://think-tank-influence-tracker-iota.vercel.app"),
   title: {
-    default: "Think Tank Influence Tracker | TTIT",
-    template: "%s | TTIT",
+    default: "Think Tank Influence Tracker",
+    template: "%s · Think Tank Influence Tracker",
   },
   description:
     "A student research prototype tracing think tank funding, policy output and legislation. Contains demonstration and AI-generated data — see the methodology page.",
 };
 
 const NAV = [
-  { href: "/think-tanks", label: "Think Tanks" },
+  { href: "/think-tanks", label: "Think tanks" },
   { href: "/donors", label: "Donors" },
   { href: "/explore", label: "Explore" },
   { href: "/compare", label: "Compare" },
@@ -26,66 +26,61 @@ const NAV = [
   { href: "/methodology", label: "Methodology" },
 ];
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={`${inter.className} min-h-screen flex flex-col bg-background text-foreground`}>
+    <html lang="en" className={`${inter.variable} ${serif.variable}`}>
+      <body className="min-h-screen flex flex-col bg-background text-foreground font-[family-name:var(--font-sans)]">
         <a
           href="#main"
-          className="sr-only focus:not-sr-only focus:absolute focus:z-[60] focus:m-3 focus:rounded-md focus:bg-primary focus:px-4 focus:py-2 focus:text-black focus:font-semibold"
+          className="sr-only focus:not-sr-only focus:absolute focus:z-50 focus:m-3 focus:rounded-sm focus:bg-accent focus:px-3 focus:py-2 focus:text-white focus:font-medium"
         >
           Skip to content
         </a>
-        <nav
-          aria-label="Primary"
-          className="border-b border-card-border bg-card/80 backdrop-blur-md sticky top-0 z-50"
-        >
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between gap-4 h-16">
+
+        <header className="border-b border-border bg-surface">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6">
+            <div className="flex items-baseline justify-between gap-6 h-14">
               <Link
                 href="/"
-                className="flex items-center gap-2 text-primary font-bold text-xl tracking-tight shrink-0"
+                className="font-[family-name:var(--font-serif)] text-lg font-semibold tracking-tight shrink-0 hover:text-accent"
               >
-                <Activity className="h-6 w-6" aria-hidden="true" />
-                TTIT
+                {/* The full name crowds the nav below ~640px. */}
+                <span className="hidden sm:inline">Think Tank Influence Tracker</span>
+                <span className="sm:hidden">TTIT</span>
               </Link>
-              {/* Horizontally scrollable rather than overflowing: six links plus
-                  the logo do not fit on a 375px viewport. */}
-              <div className="flex gap-4 overflow-x-auto whitespace-nowrap py-2 -my-2">
+              <nav aria-label="Primary" className="flex gap-5 overflow-x-auto whitespace-nowrap">
                 {NAV.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
-                    className="text-sm text-muted hover:text-white transition-colors shrink-0"
+                    className="text-sm text-muted hover:text-foreground shrink-0"
                   >
                     {item.label}
                   </Link>
                 ))}
-              </div>
+              </nav>
             </div>
           </div>
-        </nav>
-        <main id="main" className="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8">
+        </header>
+
+        <main id="main" className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-8">
           {children}
         </main>
-        <footer className="border-t border-card-border mt-8">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 text-xs text-muted leading-relaxed">
+
+        <footer className="border-t border-border mt-12 bg-surface">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 text-xs text-muted leading-relaxed space-y-2">
             <p>
-              <strong className="text-white/80">Research prototype.</strong> Parts of this site are
-              demonstration data or unverified language-model output, labelled in place. Nothing
-              here is a finding of fact about any named organization or person.{" "}
-              <Link href="/methodology" className="text-primary underline">
+              <strong className="font-semibold text-foreground">Research prototype.</strong> Parts
+              of this site are demonstration data or unverified language-model output, labelled in
+              place. Nothing here is a finding of fact about any named organization or person.{" "}
+              <Link href="/methodology" className="text-accent underline underline-offset-2">
                 Read the methodology
               </Link>
               .
             </p>
-            <p className="mt-2">
-              Nonprofit financials via ProPublica Nonprofit Explorer · campaign finance via the FEC
-              · legislative data via GovInfo.
+            <p>
+              Nonprofit financials via ProPublica Nonprofit Explorer · campaign finance via the FEC ·
+              legislative data via GovInfo.
             </p>
           </div>
         </footer>

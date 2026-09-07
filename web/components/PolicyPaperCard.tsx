@@ -11,54 +11,60 @@ interface PolicyPaperCardProps {
   url: string | null;
 }
 
-export default function PolicyPaperCard({ title, summary, publishedDate, topicTags, url }: PolicyPaperCardProps) {
+export default function PolicyPaperCard({
+  title,
+  summary,
+  publishedDate,
+  topicTags,
+  url,
+}: PolicyPaperCardProps) {
   const [expanded, setExpanded] = useState(false);
+  // Tags repeat within a row, so dedupe before using them as keys.
+  const tags = Array.from(
+    new Set(
+      (topicTags ?? "")
+        .split(",")
+        .map((t) => t.trim())
+        .filter(Boolean)
+    )
+  );
 
   return (
-    <div className="rounded-lg bg-card-border/30 hover:bg-card-border/50 transition-colors overflow-hidden">
-      {/* Clickable header */}
+    <li className="border-b border-border last:border-0">
       <button
         onClick={() => setExpanded(!expanded)}
-        className="w-full text-left p-4 flex items-start gap-3 cursor-pointer group"
+        aria-expanded={expanded}
+        className="w-full text-left py-3 flex items-start gap-2.5 group"
       >
-        <span className="mt-0.5 flex-shrink-0 text-primary/60 group-hover:text-primary transition-colors">
+        <span aria-hidden="true" className="mt-0.5 shrink-0 text-muted group-hover:text-accent">
           {expanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />}
         </span>
-        <div className="flex-1 min-w-0">
-          <h4 className="font-semibold text-white leading-tight group-hover:text-primary transition-colors">
+        <span className="flex-1 min-w-0">
+          <span className="block font-medium text-foreground leading-snug group-hover:text-accent">
             {title}
-          </h4>
-          <div className="flex items-center justify-between mt-2 text-xs text-muted">
-            <span>{publishedDate}</span>
-            <div className="flex gap-1 flex-wrap">
-              {topicTags?.split(",").map(tag => (
-                <span key={tag} className="px-1.5 py-0.5 bg-primary/10 text-primary rounded-md">{tag.trim()}</span>
-              ))}
-            </div>
-          </div>
-        </div>
+          </span>
+          <span className="mt-1 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+            {publishedDate && <span className="tnum">{publishedDate}</span>}
+            {tags.length > 0 && <span>{tags.join(" · ")}</span>}
+          </span>
+        </span>
       </button>
 
-      {/* Expandable summary */}
       {expanded && (
-        <div className="px-4 pb-4 pt-0 ml-7 border-t border-card-border/30">
-          {summary ? (
-            <p className="text-sm text-muted leading-relaxed mt-3 whitespace-pre-line">{summary}</p>
-          ) : (
-            <p className="text-sm text-muted italic mt-3">No summary available for this paper.</p>
-          )}
+        <div className="pb-4 pl-7 text-sm text-muted leading-relaxed">
+          {summary ? <p>{summary}</p> : <p>No summary recorded for this paper.</p>}
           {url && (
             <a
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 text-xs text-primary hover:underline mt-3"
+              className="mt-2 inline-flex items-center gap-1 text-accent underline underline-offset-2"
             >
-              View full paper <ExternalLink className="w-3 h-3" />
+              Open source <ExternalLink className="w-3 h-3" aria-hidden="true" />
             </a>
           )}
         </div>
       )}
-    </div>
+    </li>
   );
 }

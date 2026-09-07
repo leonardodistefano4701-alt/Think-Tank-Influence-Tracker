@@ -11,8 +11,8 @@ export default async function ThinkTanksPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-4xl font-bold tracking-tight mb-2">Think Tanks</h1>
-        <p className="text-muted">The primary drivers of structural policy influence.</p>
+        <h1 className="text-2xl font-bold tracking-tight mb-2">Think tanks</h1>
+        <p className="text-muted">The six organizations tracked in this project.</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

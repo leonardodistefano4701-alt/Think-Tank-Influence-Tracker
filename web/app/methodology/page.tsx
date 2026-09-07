@@ -41,16 +41,16 @@ export default function MethodologyPage() {
   return (
     <div className="flex flex-col gap-8 max-w-4xl">
       <div>
-        <h1 className="text-4xl font-extrabold tracking-tight mb-2">
-          Methodology &amp; <span className="text-primary">Provenance</span>
+        <h1 className="text-2xl font-semibold tracking-tight mb-2">
+          Methodology
         </h1>
         <p className="text-muted text-lg">
           What this project actually knows, and how it knows it.
         </p>
       </div>
 
-      <div className="glass p-6 rounded-2xl border border-amber-500/30 bg-amber-500/5">
-        <h2 className="text-lg font-bold text-amber-300 flex items-center gap-2 mb-3">
+      <div className="bg-surface border border-border rounded-md p-5 border border-demo/25 bg-demo-wash">
+        <h2 className="text-lg font-bold text-demo flex items-center gap-2 mb-3">
           <AlertTriangle className="w-5 h-5" aria-hidden="true" />
           Read this before citing anything here
         </h2>
@@ -75,7 +75,7 @@ export default function MethodologyPage() {
         </div>
       </div>
 
-      <div className="glass p-6 rounded-2xl">
+      <div className="bg-surface border border-border rounded-md p-5">
         <h2 className="text-xl font-bold mb-4">The three provenance levels</h2>
         <div className="flex flex-col gap-4">
           <div className="flex gap-4 items-start">
@@ -92,9 +92,9 @@ export default function MethodologyPage() {
               Written by hand in the seed scripts so the interface has something to render.
               Plausible in shape and scale, but not drawn from any filing. Earlier versions of
               this project labelled these rows with real source names such as{" "}
-              <code className="text-amber-300">irs_990</code>,{" "}
-              <code className="text-amber-300">opensecrets</code> and{" "}
-              <code className="text-amber-300">fara</code>, which was misleading — there is no
+              <code className="text-demo">irs_990</code>,{" "}
+              <code className="text-demo">opensecrets</code> and{" "}
+              <code className="text-demo">fara</code>, which was misleading — there is no
               OpenSecrets collector in this codebase. Those labels have been removed.
             </p>
           </div>
@@ -110,12 +110,12 @@ export default function MethodologyPage() {
         </div>
       </div>
 
-      <div className="glass p-6 rounded-2xl">
+      <div className="bg-surface border border-border rounded-md p-5">
         <h2 className="text-xl font-bold mb-4">What each table contains</h2>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border text-left text-muted">
+              <tr className="border-b border-border text-left text-muted">
                 <th scope="col" className="py-2 pr-4 font-semibold">Table</th>
                 <th scope="col" className="py-2 pr-4 font-semibold">Provenance</th>
                 <th scope="col" className="py-2 font-semibold">Source</th>
@@ -125,8 +125,8 @@ export default function MethodologyPage() {
               {TABLES.map((t) => {
                 const rows = counts(db, t.name);
                 return (
-                  <tr key={t.name} className="border-b border-card-border/50 align-top">
-                    <td className="py-3 pr-4 font-semibold text-white whitespace-nowrap">{t.label}</td>
+                  <tr key={t.name} className="border-b border-border align-top">
+                    <td className="py-3 pr-4 font-semibold text-foreground whitespace-nowrap">{t.label}</td>
                     <td className="py-3 pr-4">
                       <div className="flex flex-col gap-1.5">
                         {rows.length === 0 ? (
@@ -136,7 +136,7 @@ export default function MethodologyPage() {
                             <span key={String(r.provenance)} className="flex items-center gap-2 whitespace-nowrap">
                               <ProvenanceBadge
                                 provenance={r.provenance as never}
-                                size="xs"
+                               
                               />
                               <span className="text-muted tabular-nums">
                                 {r.c.toLocaleString()}
@@ -155,35 +155,35 @@ export default function MethodologyPage() {
         </div>
       </div>
 
-      <div className="glass p-6 rounded-2xl">
+      <div className="bg-surface border border-border rounded-md p-5">
         <h2 className="text-xl font-bold mb-4">Known limitations</h2>
         <ul className="text-sm text-muted space-y-3 list-disc pl-5 leading-relaxed">
           <li>
-            <strong className="text-white">Influence &quot;strength&quot; is not a measurement.</strong>{" "}
+            <strong className="text-foreground">Influence &quot;strength&quot; is not a measurement.</strong>{" "}
             The values mix three incompatible things: hand-written literals, a constant assigned
             to every model-discovered link, and a donation divided by the largest donation to the
             same organization. They are averaged together and rendered as a percentage, which
             overstates their precision considerably.
           </li>
           <li>
-            <strong className="text-white">A link is co-occurrence, not causation.</strong> Link
+            <strong className="text-foreground">A link is co-occurrence, not causation.</strong> Link
             types are causal verbs — <em>informs</em>, <em>advocates_for</em>, <em>influences</em>{" "}
             — applied to topical overlap. There is no control group and no base rate.
           </li>
           <li>
-            <strong className="text-white">&quot;Capture risk&quot; is a composed heuristic.</strong>{" "}
+            <strong className="text-foreground">&quot;Capture risk&quot; is a composed heuristic.</strong>{" "}
             Its four weights were chosen by hand, not fitted or validated against anything.
           </li>
           <li>
-            <strong className="text-white">Attribution.</strong> Nonprofit financial data comes
+            <strong className="text-foreground">Attribution.</strong> Nonprofit financial data comes
             from the{" "}
-            <a href="https://projects.propublica.org/nonprofits/" className="text-primary underline">
+            <a href="https://projects.propublica.org/nonprofits/" className="text-accent underline">
               ProPublica Nonprofit Explorer
             </a>
             . Campaign finance data comes from the{" "}
-            <a href="https://www.fec.gov/" className="text-primary underline">FEC</a>. Legislative
+            <a href="https://www.fec.gov/" className="text-accent underline">FEC</a>. Legislative
             data comes from{" "}
-            <a href="https://www.govinfo.gov/" className="text-primary underline">GovInfo</a>.
+            <a href="https://www.govinfo.gov/" className="text-accent underline">GovInfo</a>.
           </li>
         </ul>
       </div>

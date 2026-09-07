@@ -1,8 +1,8 @@
 import { getDb } from "@/lib/db";
+import { StatList } from "@/components/ui";
 import { ProvenanceBanner } from "@/components/ProvenanceBadge";
 import { Donor } from "@/lib/types";
 import Link from "next/link";
-import { DollarSign, AlertTriangle, Building2 } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -36,78 +36,67 @@ export default async function DonorsPage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div>
-        <h1 className="text-4xl font-extrabold tracking-tight mb-2">Donor <span className="text-primary">Database</span></h1>
-        <ProvenanceBanner kinds={["seeded_demo"]}>
-          Every donor row on this page is hand-authored demonstration data. No donor collector is implemented in this project, so these amounts are illustrative and are not drawn from any filing.
-        </ProvenanceBanner>
-        <p className="text-muted text-lg max-w-2xl">All tracked donors across every think tank, ranked by contribution amount.</p>
-      </div>
+      <header className="border-b border-border pb-5">
+        <h1 className="text-2xl md:text-3xl font-semibold tracking-tight">Donors</h1>
+        <p className="mt-2 text-base text-muted max-w-2xl leading-relaxed">Every donor in the database, ranked by amount.</p>
+        <div className="mt-4">
+          <ProvenanceBanner kinds={["seeded_demo"]}>
+            Every donor row on this page is hand-authored demonstration data. No donor collector is
+            implemented in this project, so these amounts are illustrative and are not drawn from
+            any filing.
+          </ProvenanceBanner>
+        </div>
+      </header>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="glass p-5 rounded-xl text-center">
-          <DollarSign className="w-6 h-6 text-primary mx-auto mb-2" />
-          <div className="text-2xl font-bold">{formatDollar(totalAmount)}</div>
-          <div className="text-xs text-muted mt-1">Total Tracked</div>
-        </div>
-        <div className="glass p-5 rounded-xl text-center">
-          <Building2 className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold">{donors.length}</div>
-          <div className="text-xs text-muted mt-1">Donor Records</div>
-        </div>
-        <div className="glass p-5 rounded-xl text-center">
-          <AlertTriangle className="w-6 h-6 text-red-500 mx-auto mb-2" />
-          <div className="text-2xl font-bold">{foreignDonors.length}</div>
-          <div className="text-xs text-muted mt-1">Foreign Gov&apos;t Sources</div>
-        </div>
-        <div className="glass p-5 rounded-xl text-center">
-          <DollarSign className="w-6 h-6 text-red-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold">{formatDollar(foreignTotal)}</div>
-          <div className="text-xs text-muted mt-1">Foreign Gov&apos;t Total</div>
-        </div>
-      </div>
+      <StatList
+        items={[
+          { label: "Tracked total", value: formatDollar(totalAmount) },
+          { label: "Donor records", value: donors.length },
+          { label: "Foreign gov't sources", value: foreignDonors.length },
+          { label: "Foreign gov't total", value: formatDollar(foreignTotal) },
+        ]}
+      />
 
       {/* Industry Breakdown */}
-      <div className="glass p-6 rounded-xl">
-        <h2 className="text-xl font-bold mb-4">Donor Industry Breakdown</h2>
+      <div className="bg-surface border border-border rounded-md p-5">
+        <h2 className="text-xl font-bold mb-4">Donors by industry</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
           {industries.map(([industry, stats]) => (
-            <div key={industry} className="p-3 rounded-lg bg-card-border/30 flex items-center justify-between">
+            <div key={industry} className="p-3 rounded-sm bg-surface-sunken flex items-center justify-between">
               <div>
-                <span className="text-sm font-semibold text-white">{industry}</span>
+                <span className="text-sm font-semibold text-foreground">{industry}</span>
                 <span className="text-xs text-muted ml-2">({stats.count} donors)</span>
               </div>
-              <span className="font-bold text-primary text-sm">{formatDollar(stats.total)}</span>
+              <span className="font-bold text-accent text-sm">{formatDollar(stats.total)}</span>
             </div>
           ))}
         </div>
       </div>
 
       {/* Full Donor List */}
-      <div className="glass p-6 rounded-xl">
+      <div className="bg-surface border border-border rounded-md p-5">
         <h2 className="text-xl font-bold mb-4">All Donors (by amount)</h2>
         <div className="flex flex-col gap-2">
           {donors.map((d, i) => (
-            <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-card-border/20 hover:bg-card-border/40 transition-colors">
+            <div key={d.id} className="flex items-center justify-between p-3 rounded-sm bg-surface-sunken hover:bg-surface-sunken transition-colors">
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <span className="text-xs font-mono text-muted w-6 text-right">#{i + 1}</span>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
-                    <span className="font-semibold text-white truncate">{d.donor_name}</span>
+                    <span className="font-semibold text-foreground truncate">{d.donor_name}</span>
                     {d.is_foreign_govt === 1 && (
-                      <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded-md uppercase tracking-wider flex-shrink-0">Foreign</span>
+                      <span className="px-1.5 py-0.5 bg-failed-wash text-failed text-2xs font-bold rounded-md uppercase tracking-wider flex-shrink-0">Foreign</span>
                     )}
                   </div>
                   <div className="text-xs text-muted flex gap-3 mt-0.5">
                     <span>{d.industry}</span>
-                    <span>→ <Link href={`/think-tanks/${d.tank_slug}`} className="text-primary hover:underline">{d.tank_name}</Link></span>
+                    <span>→ <Link href={`/think-tanks/${d.tank_slug}`} className="text-accent hover:underline">{d.tank_name}</Link></span>
                     {d.year && <span>({d.year})</span>}
-                    <span className="text-primary/50">{d.source}</span>
+                    <span className="text-muted">{d.source}</span>
                   </div>
                 </div>
               </div>
-              <span className="font-bold text-primary text-lg ml-4">{formatDollar(d.amount)}</span>
+              <span className="font-bold text-accent text-lg ml-4">{formatDollar(d.amount)}</span>
             </div>
           ))}
         </div>

@@ -18,26 +18,25 @@ export default function CompareSelector({
 
   // No local useState mirror of the props. The previous version snapshotted
   // currentA/currentB once, ignored the new props the server sent after a
-  // navigation, and so desynchronised from the URL on Back/Forward. The URL is
-  // the single source of truth.
+  // navigation, and so desynchronised from the URL on Back/Forward.
   const handleUpdate = (newA: string, newB: string) => {
     router.push(`/compare?a=${newA}&b=${newB}`);
   };
 
+  const selectClass =
+    'w-full bg-surface border border-border-strong rounded-sm px-2.5 py-1.5 text-sm focus:outline-none focus:border-accent';
+
   return (
-    <div className="flex flex-col md:flex-row gap-4 w-full bg-space-900 border border-card-border p-4 rounded-xl items-center">
-      <div className="flex-1 w-full">
-        <label
-          htmlFor={idA}
-          className="text-xs text-primary uppercase font-bold tracking-widest mb-1 block"
-        >
-          Left Subject
+    <div className="flex flex-col sm:flex-row gap-4">
+      <div className="flex-1">
+        <label htmlFor={idA} className="block text-xs text-muted mb-1">
+          First organization
         </label>
         <select
           id={idA}
           value={currentA}
           onChange={(e) => handleUpdate(e.target.value, currentB)}
-          className="w-full bg-black border border-primary/30 rounded-lg p-2 text-white focus:outline-none focus:border-primary"
+          className={selectClass}
         >
           {tanks.map((t) => (
             <option key={t.slug} value={t.slug} disabled={t.slug === currentB}>
@@ -47,20 +46,15 @@ export default function CompareSelector({
         </select>
       </div>
 
-      <div aria-hidden="true" className="bg-card-border w-12 h-px md:w-px md:h-12 flex-shrink-0" />
-
-      <div className="flex-1 w-full">
-        <label
-          htmlFor={idB}
-          className="text-xs text-yellow-500 uppercase font-bold tracking-widest mb-1 block"
-        >
-          Right Subject
+      <div className="flex-1">
+        <label htmlFor={idB} className="block text-xs text-muted mb-1">
+          Second organization
         </label>
         <select
           id={idB}
           value={currentB}
           onChange={(e) => handleUpdate(currentA, e.target.value)}
-          className="w-full bg-black border border-yellow-500/30 rounded-lg p-2 text-white focus:outline-none focus:border-yellow-500"
+          className={selectClass}
         >
           {tanks.map((t) => (
             <option key={t.slug} value={t.slug} disabled={t.slug === currentA}>

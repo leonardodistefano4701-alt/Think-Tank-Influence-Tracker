@@ -1,8 +1,9 @@
 import { getDb } from "@/lib/db";
+import { StatList } from "@/components/ui";
 import type { VerdictRow } from "@/lib/rows";
 import { Entity, Financial, Donor, InfluenceLink, PolicyPaper, Lobbying } from "@/lib/types";
 import FinancialBreakdown from "@/components/FinancialBreakdown";
-import { Building2, DollarSign, AlertTriangle, Scale, Globe, FileText, Link2, ShieldAlert } from "lucide-react";
+import { Building2, AlertTriangle } from "lucide-react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import AIVerdictCard from "@/components/AIVerdictCard";
@@ -29,16 +30,17 @@ function formatDollar(val: number | null) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(val);
 }
 
+// Strength is a magnitude, not a judgement. The previous ramp ran green (weak)
+// to red (strong), which inverted the bill-status palette where green means
+// enacted and red means failed. One neutral ramp removes that contradiction.
 function strengthBar(strength: number | null) {
-  const s = strength ?? 0;
-  const pct = Math.round(s * 100);
-  const color = s >= 0.85 ? "bg-red-500" : s >= 0.6 ? "bg-yellow-500" : "bg-green-500";
+  const pct = Math.max(0, Math.min(100, Math.round((strength ?? 0) * 100)));
   return (
     <div className="flex items-center gap-2 text-xs">
-      <div className="w-24 h-2 rounded-full bg-card-border overflow-hidden">
-        <div className={`h-full rounded-full ${color}`} style={{ width: `${pct}%` }} />
+      <div className="w-24 h-1.5 rounded-sm bg-surface-sunken overflow-hidden">
+        <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
       </div>
-      <span className="text-muted">{pct}%</span>
+      <span className="text-muted tnum">{pct}%</span>
     </div>
   );
 }
@@ -81,57 +83,37 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
   return (
     <div className="flex flex-col gap-8">
       {/* ── Header ─────────────────────────────────────────────────── */}
-      <div className="glass p-8 rounded-2xl relative overflow-hidden">
-        <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-primary via-yellow-500 to-red-500" />
+      <div className="bg-surface border border-border rounded-md p-5">
         <div className="flex flex-col md:flex-row gap-8 items-start md:items-center">
-          <div className="p-6 bg-card-border/50 rounded-xl">
-            <Building2 className="w-16 h-16 text-primary" />
+          <div className="p-6 bg-surface-sunken rounded-md">
+            <Building2 className="w-16 h-16 text-accent" />
           </div>
           <div className="flex-1">
             <div className="flex items-center gap-4 mb-2 flex-wrap">
-              <h1 className="text-4xl font-extrabold">{entity.name}</h1>
+              <h1 className="text-2xl font-semibold">{entity.name}</h1>
               {entity.lean && (
-                <span className="px-3 py-1 bg-card-border rounded-full text-sm font-medium">{entity.lean}</span>
+                <span className="px-3 py-1 bg-surface-sunken rounded-full text-sm font-medium">{entity.lean}</span>
               )}
             </div>
             <p className="text-xl text-muted max-w-3xl">{entity.description || 'Tracked nonprofit policy organization.'}</p>
             <div className="flex gap-6 mt-4 text-sm text-muted flex-wrap">
-              {entity.ein && <div><span className="font-bold text-white">EIN:</span> {entity.ein}</div>}
-              <div><span className="font-bold text-white">Entity Type:</span> Think Tank</div>
-              <div><span className="font-bold text-white">Tracked Donors:</span> {donors.length}</div>
+              {entity.ein && <div><span className="font-bold text-foreground">EIN:</span> {entity.ein}</div>}
+              <div><span className="font-bold text-foreground">Entity Type:</span> Think Tank</div>
+              <div><span className="font-bold text-foreground">Tracked Donors:</span> {donors.length}</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* ── Quick Stats ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="glass p-5 rounded-xl text-center">
-          <DollarSign className="w-6 h-6 text-primary mx-auto mb-2" />
-          <div className="text-2xl font-bold">{formatDollar(totalDonorAmount)}</div>
-          <div className="text-xs text-muted mt-1">Total Tracked Donations</div>
-        </div>
-        <div className="glass p-5 rounded-xl text-center">
-          <Scale className="w-6 h-6 text-yellow-500 mx-auto mb-2" />
-          <div className="text-2xl font-bold">{influenceLinks.length}</div>
-          <div className="text-xs text-muted mt-1">Influence Links</div>
-        </div>
-        <div className="glass p-5 rounded-xl text-center">
-          <FileText className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-          <div className="text-2xl font-bold">{policyPapers.length}</div>
-          <div className="text-xs text-muted mt-1">Policy Papers</div>
-        </div>
-        <div className="glass p-5 rounded-xl text-center">
-          {foreignDonors.length > 0 ? (
-            <AlertTriangle className="w-6 h-6 text-red-500 mx-auto mb-2" />
-          ) : (
-            <Globe className="w-6 h-6 text-green-500 mx-auto mb-2" />
-          )}
-          <div className="text-2xl font-bold">{foreignDonors.length}</div>
-          <div className="text-xs text-muted mt-1">Foreign Gov&apos;t Donors</div>
-        </div>
-      </div>
-      
+      <StatList
+        items={[
+          { label: "Tracked donations", value: formatDollar(totalDonorAmount), hint: "demo data" },
+          { label: "Influence links", value: influenceLinks.length },
+          { label: "Policy papers", value: policyPapers.length },
+          { label: "Foreign gov't donors", value: foreignDonors.length },
+        ]}
+      />
+
       {aiInfo && <AIVerdictCard info={aiInfo} />}
 
       {/* ── Financial + Donors Row ──────────────────────────────────── */}
@@ -139,35 +121,34 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
         <FinancialBreakdown financials={financials} />
 
         {/* Donors List */}
-        <div className="glass p-6 rounded-xl">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-primary" />
+        <div className="bg-surface border border-border rounded-md p-5">
+          <h3 className="text-lg font-semibold tracking-tight mb-4">
             Top Donors
           </h3>
           {donors.length === 0 ? (
-            <div className="text-muted italic flex items-center justify-center h-48 border border-dashed border-card-border rounded-lg">
+            <div className="text-muted italic flex items-center justify-center h-48 border border-dashed border-border rounded-sm">
               No donor data available.
             </div>
           ) : (
             <div className="flex flex-col gap-3 max-h-[340px] overflow-y-auto pr-2">
               {donors.map((d, i) => (
-                <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-card-border/30 hover:bg-card-border/50 transition-colors group">
+                <div key={d.id} className="flex items-center justify-between p-3 rounded-sm bg-surface-sunken hover:bg-surface-sunken transition-colors group">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <span className="text-xs font-mono text-muted">#{i + 1}</span>
-                      <span className="font-semibold text-white truncate">{d.donor_name}</span>
+                      <span className="font-semibold text-foreground truncate">{d.donor_name}</span>
                       {d.is_foreign_govt === 1 && (
-                        <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded-md uppercase tracking-wider">Foreign</span>
+                        <span className="px-1.5 py-0.5 bg-failed-wash text-failed text-2xs font-bold rounded-md uppercase tracking-wider">Foreign</span>
                       )}
                     </div>
                     <div className="text-xs text-muted mt-1 flex gap-3">
                       <span>{d.industry}</span>
                       {d.year && <span>({d.year})</span>}
-                      <span className="text-primary/60">{d.source}</span>
+                      <span className="text-muted">{d.source}</span>
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="font-bold text-primary text-lg">{formatDollar(d.amount)}</span>
+                    <span className="font-bold text-accent text-lg">{formatDollar(d.amount)}</span>
                   </div>
                 </div>
               ))}
@@ -176,12 +157,11 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
         </div>
       </div>
 
-      {/* ── Policy Papers ─────────────────────────────────────────── */}
+      {/* ── Policy papers ─────────────────────────────────────────── */}
       {policyPapers.length > 0 && (
-        <div className="glass p-6 rounded-xl">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-400" />
-            Policy Papers
+        <div className="bg-surface border border-border rounded-md p-5">
+          <h3 className="text-lg font-semibold tracking-tight mb-4">
+            Policy papers
             <span className="text-sm font-normal text-muted">({policyPapers.length})</span>
           </h3>
           <p className="text-sm text-muted mb-4">Click any title to read the summary.</p>
@@ -200,31 +180,30 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
         </div>
       )}
 
-      {/* ── Influence Links → Legislation ─────────────────────────── */}
+      {/* ── Influence links → Legislation ─────────────────────────── */}
       {influenceLinks.length > 0 && (
-        <div className="glass p-6 rounded-xl">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Link2 className="w-5 h-5 text-yellow-500" />
+        <div className="bg-surface border border-border rounded-md p-5">
+          <h3 className="text-lg font-semibold tracking-tight mb-4">
             Influence on Legislation
           </h3>
           <div className="flex flex-col gap-4">
             {influenceLinks.map(link => (
-              <div key={link.id} className="p-4 rounded-lg bg-card-border/30 border-l-4 border-l-yellow-500/50">
+              <div key={link.id} className="p-4 rounded-sm bg-surface-sunken border-l-4 border-l-yellow-500/50">
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-1 flex-wrap">
                       <span className={`px-2 py-0.5 text-xs font-bold rounded-md uppercase tracking-wider ${
-                        link.link_type === 'advocates_for' ? 'bg-green-500/20 text-green-400' :
-                        link.link_type === 'opposes' ? 'bg-red-500/20 text-red-400' :
-                        'bg-gray-500/20 text-gray-400'
+                        link.link_type === 'advocates_for' ? 'bg-enacted-wash text-enacted' :
+                        link.link_type === 'opposes' ? 'bg-failed-wash text-failed' :
+                        'bg-surface-sunken text-muted'
                       }`}>
                         {link.link_type?.replace("_", " ")}
                       </span>
-                      <h4 className="font-semibold text-white">{link.leg_title || "Unknown Bill"}</h4>
+                      <h4 className="font-semibold text-foreground">{link.leg_title || "Unknown Bill"}</h4>
                     </div>
                     <div className="flex gap-3 text-xs text-muted mb-2">
                       {link.bill_id && <span className="font-mono">{link.bill_id}</span>}
-                      {link.leg_status && <span className="px-1.5 py-0.5 bg-card-border rounded text-muted">{link.leg_status}</span>}
+                      {link.leg_status && <span className="px-1.5 py-0.5 bg-surface-sunken rounded text-muted">{link.leg_status}</span>}
                       {link.year && <span>{link.year}</span>}
                     </div>
                     <p className="text-sm text-muted leading-relaxed">{link.evidence}</p>
@@ -242,24 +221,23 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
 
       {/* ── Lobbying Activity ──────────────────────────────────────── */}
       {lobbying.length > 0 && (
-        <div className="glass p-6 rounded-xl">
-          <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <ShieldAlert className="w-5 h-5 text-red-400" />
+        <div className="bg-surface border border-border rounded-md p-5">
+          <h3 className="text-lg font-semibold tracking-tight mb-4">
             Lobbying Disclosures
           </h3>
           <div className="flex flex-col gap-3">
             {lobbying.map(lob => (
-              <div key={lob.id} className="p-4 rounded-lg bg-card-border/30 flex items-start justify-between gap-4">
+              <div key={lob.id} className="p-4 rounded-sm bg-surface-sunken flex items-start justify-between gap-4">
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 text-xs font-bold bg-card-border rounded-md text-muted">{lob.issue_code}</span>
-                    <span className="font-semibold text-white">{lob.registrant_name}</span>
+                    <span className="px-2 py-0.5 text-xs font-bold bg-surface-sunken rounded-md text-muted">{lob.issue_code}</span>
+                    <span className="font-semibold text-foreground">{lob.registrant_name}</span>
                   </div>
                   <p className="text-sm text-muted">{lob.issue_description}</p>
                   <span className="text-xs text-muted mt-1 block">{lob.filing_year} • {lob.filing_period}</span>
                 </div>
                 <div className="text-right">
-                  <span className="font-bold text-primary text-lg">{formatDollar(lob.amount)}</span>
+                  <span className="font-bold text-accent text-lg">{formatDollar(lob.amount)}</span>
                 </div>
               </div>
             ))}
@@ -269,10 +247,10 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
 
       {/* ── Foreign Funding Warning ────────────────────────────────── */}
       {foreignDonors.length > 0 && (
-        <div className="rounded-xl p-6 bg-red-500/5 border border-red-500/20">
-          <h3 className="text-lg font-bold text-amber-300 flex items-center gap-2 mb-3">
+        <div className="rounded-md p-6 bg-failed-wash border border-failed/25">
+          <h3 className="text-lg font-bold text-demo flex items-center gap-2 mb-3">
             <AlertTriangle className="w-5 h-5" aria-hidden="true" />
-            Foreign Government Funding (demonstration data)
+            Foreign government funding
           </h3>
           <p className="text-sm text-muted mb-2">
             {foreignDonors.length} donor row(s) in this prototype are flagged as foreign
@@ -282,13 +260,13 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
             This is not a statement that this organization is registered under, or required to
             register under, the Foreign Agents Registration Act. No FARA filing has been
             retrieved or checked by this project. See{" "}
-            <Link href="/methodology" className="text-primary underline">methodology</Link>.
+            <Link href="/methodology" className="text-accent underline">methodology</Link>.
           </p>
           <div className="flex flex-col gap-2">
             {foreignDonors.map(d => (
-              <div key={d.id} className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10">
-                <span className="font-semibold text-amber-200">{d.donor_name}</span>
-                <span className="font-bold text-amber-300">{formatDollar(d.amount)}</span>
+              <div key={d.id} className="flex items-center justify-between p-3 rounded-sm bg-demo-wash">
+                <span className="font-semibold text-demo">{d.donor_name}</span>
+                <span className="font-bold text-demo">{formatDollar(d.amount)}</span>
               </div>
             ))}
           </div>
@@ -297,7 +275,7 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
 
       {/* ── Back link ──────────────────────────────────────────────── */}
       <div className="mt-4">
-        <Link href="/" className="text-primary hover:underline">← Back to all think tanks</Link>
+        <Link href="/" className="text-accent hover:underline">← Back to all think tanks</Link>
       </div>
     </div>
   );

@@ -11,8 +11,8 @@ export default async function AmplifiersPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-4xl font-bold tracking-tight mb-2">Media Amplifiers</h1>
-        <p className="text-muted">Commentators and outlets that echo structural think tank narratives.</p>
+        <h1 className="text-2xl font-bold tracking-tight mb-2">Media amplifiers</h1>
+        <p className="text-muted">Two commentators tracked alongside the organizations.</p>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
