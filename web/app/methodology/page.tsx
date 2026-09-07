@@ -5,7 +5,8 @@ import { AlertTriangle } from "lucide-react";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Methodology & Data Provenance | TTIT",
+  // The root layout applies a "%s | TTIT" template, so no suffix here.
+  title: "Methodology & Provenance",
   description:
     "Where every figure in this project comes from, what is verified against a primary source, and what is demonstration or AI-generated data.",
 };
