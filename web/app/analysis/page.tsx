@@ -67,19 +67,83 @@ interface TankAnalysis {
   chains: DonorChain[];
 }
 
+type DonorPaperLinkRow = DonationRow & {
+  paper_id: string;
+  tank_id: string;
+  strength: number | null;
+  evidence: string | null;
+  donor_id: string;
+};
+
+/** Group rows into a Map, preserving the order the query returned them in. */
+function groupBy<T>(rows: T[], key: (row: T) => string | null): Map<string, T[]> {
+  const out = new Map<string, T[]>();
+  for (const row of rows) {
+    const k = key(row);
+    if (k == null) continue;
+    const bucket = out.get(k);
+    if (bucket) bucket.push(row);
+    else out.set(k, [row]);
+  }
+  return out;
+}
+
+const THINK_TANK_IDS = "SELECT id FROM entities WHERE type = 'think_tank'";
+
 export default async function AnalysisPage() {
   const db = getDb();
 
-  // Get all think tanks
-  const tanks = db.prepare("SELECT * FROM entities WHERE type = 'think_tank' ORDER BY name").all() as (UnknownRow & { id: string; name: string; slug: string; lean: string | null })[];
+  // Four set-based queries, then grouped in memory. This previously ran one
+  // query per think tank and then one per policy paper — 138 queries per
+  // request, growing with the size of the corpus rather than staying fixed.
+  const tanks = db
+    .prepare("SELECT * FROM entities WHERE type = 'think_tank' ORDER BY name")
+    .all() as (UnknownRow & { id: string; name: string; slug: string; lean: string | null })[];
+
+  const allPapers = db
+    .prepare(`SELECT * FROM policy_papers WHERE entity_id IN (${THINK_TANK_IDS})`)
+    .all() as PolicyPaperRow[];
+
+  // Filtered by the INNER JOIN to legislation, matching the per-paper query
+  // this replaces: a link whose target is not a real bill is excluded.
+  const allLegLinks = db
+    .prepare(
+      `SELECT il.*, l.id as leg_id, l.title as leg_title, l.bill_id, l.status as leg_status
+         FROM influence_links il
+         JOIN legislation l ON il.target_id = l.id
+        WHERE il.source_type = 'policy_paper'
+          AND il.source_id IN (
+                SELECT id FROM policy_papers WHERE entity_id IN (${THINK_TANK_IDS})
+              )`
+    )
+    .all() as LegislationLinkRow[];
+
+  // Joined through policy_papers to recover the owning think tank. That cannot
+  // fan out, because policy_papers.id is the primary key.
+  const allDonorLinks = db
+    .prepare(
+      `SELECT il.strength, il.evidence, il.target_id as paper_id,
+              d.id as donor_id, d.donor_name, d.amount, d.industry, d.is_foreign_govt,
+              p.entity_id as tank_id
+         FROM influence_links il
+         JOIN donors d ON il.source_id = d.id
+         JOIN policy_papers p ON il.target_id = p.id
+        WHERE il.source_type = 'donor' AND il.target_type = 'policy_paper'
+          AND p.entity_id IN (${THINK_TANK_IDS})`
+    )
+    .all() as DonorPaperLinkRow[];
+
+  const papersByTank = groupBy(allPapers, (p) => p.entity_id);
+  const legLinksByPaper = groupBy(allLegLinks, (l) => l.source_id);
+  const donorLinksByTank = groupBy(allDonorLinks, (d) => d.tank_id);
+  // Replaces a papers.find(...) scan that ran inside the donor-link loop.
+  const papersById = new Map(allPapers.map((p) => [p.id, p]));
 
   const tankAnalyses: TankAnalysis[] = [];
 
   for (const tank of tanks) {
-    // Get all policy papers for this tank
-    const papers = db.prepare("SELECT * FROM policy_papers WHERE entity_id = ?").all(tank.id) as PolicyPaperRow[];
+    const papers = papersByTank.get(tank.id) ?? [];
 
-    // For each paper, find policy → legislation links
     let signedIntoLaw = 0;
     let passedChamber = 0;
     let inCommittee = 0;
@@ -87,18 +151,9 @@ export default async function AnalysisPage() {
     let opposed = 0;
     let papersWithLegislation = 0;
 
-    const paperLegLinks: Map<string, LegislationLinkRow[]> = new Map();
-
     for (const paper of papers) {
-      const links = db.prepare(`
-        SELECT il.*, l.id as leg_id, l.title as leg_title, l.bill_id, l.status as leg_status
-        FROM influence_links il
-        JOIN legislation l ON il.target_id = l.id
-        WHERE il.source_type = 'policy_paper' AND il.source_id = ?
-      `).all(paper.id) as LegislationLinkRow[];
-
+      const links = legLinksByPaper.get(paper.id) ?? [];
       if (links.length > 0) papersWithLegislation++;
-      paperLegLinks.set(paper.id, links);
 
       for (const link of links) {
         if (link.link_type === 'opposes') {
@@ -114,14 +169,7 @@ export default async function AnalysisPage() {
 
     // Get full donor → paper → legislation chains
     const chains: DonorChain[] = [];
-    const donorPaperLinks = db.prepare(`
-      SELECT il.strength, il.evidence, il.target_id as paper_id,
-             d.id as donor_id, d.donor_name, d.amount, d.industry, d.is_foreign_govt
-      FROM influence_links il
-      JOIN donors d ON il.source_id = d.id
-      WHERE il.source_type = 'donor' AND il.target_type = 'policy_paper'
-        AND il.target_id IN (SELECT id FROM policy_papers WHERE entity_id = ?)
-    `).all(tank.id) as (DonationRow & { paper_id: string; strength: number | null; evidence: string | null; donor_id: string })[];
+    const donorPaperLinks = donorLinksByTank.get(tank.id) ?? [];
 
     let totalDonorInfluence = 0;
     let foreignDonorLinks = 0;
@@ -132,12 +180,10 @@ export default async function AnalysisPage() {
       if (dpl.is_foreign_govt) foreignDonorLinks++;
       strengthSum += dpl.strength || 0;
 
-      // Find the paper
-      const paper = papers.find(p => p.id === dpl.paper_id);
+      const paper = papersById.get(dpl.paper_id);
       if (!paper) continue;
 
-      // Find legislation links for this paper
-      const legLinks = paperLegLinks.get(paper.id) || [];
+      const legLinks = legLinksByPaper.get(paper.id) ?? [];
 
       if (legLinks.length === 0) {
         chains.push({
