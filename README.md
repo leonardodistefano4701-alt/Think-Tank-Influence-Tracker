@@ -65,6 +65,7 @@ carries a default credential.
 | `scripts/import_bulk_bills.py` | Imports GovInfo BILLSTATUS bulk data and builds the FTS5 index |
 | `scripts/repair_bill_status.py` | Re-derives bill status from authoritative GovInfo XML |
 | `scripts/add_provenance.py` | Backfills the `provenance` column across every rendered table |
+| `scripts/slim_fts.py` | Rebuilds the FTS5 indexes as external content and installs the sync triggers |
 | `scripts/collect_perplexity.py` | Surfaces candidate policy papers via an LLM |
 | `scripts/export_excel.py` / `export_pdf.py` | Exports the database to portable formats |
 
@@ -87,7 +88,10 @@ is pulled into the serverless bundle through `outputFileTracingIncludes` in
 - `govt_contracts` and `media_coverage` are empty; the pages that read them
   render empty states.
 - The database is committed to git, which is convenient for a demo but means the
-  repository grows by roughly 10 MB every time the data is refreshed.
+  repository grows every time the data is refreshed.
+- The search indexes are external-content FTS5 tables kept in sync by triggers.
+  If you add a table to the search experience, add it to `SPECS` in
+  `scripts/slim_fts.py` rather than hand-writing a second schema.
 
 ## License
 

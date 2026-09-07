@@ -10,6 +10,7 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'data-pipeline', '
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from db import get_db
 from bill_status import derive_status, latest_action, most_recent_actions
+from slim_fts import SPECS as FTS_SPECS, build_statements as build_fts_statements
 
 BULK_BASE = 'https://www.govinfo.gov/bulkdata/BILLSTATUS'
 # GovInfo bulkdata does not require a key. GOVINFO_API_KEY is only used for the
@@ -216,86 +217,28 @@ def create_indexes(conn):
 
 
 def create_fts5(conn):
-    """Create FTS5 full-text search virtual tables."""
-    cur = conn.cursor()
-    print("\n🔍 Creating FTS5 full-text search indexes...")
+    """(Re)build the FTS5 search indexes as external-content tables.
 
-    # Drop existing FTS tables to rebuild
-    for table in ['search_legislation', 'search_entities', 'search_donors', 'search_papers']:
+    The schema lives in scripts/slim_fts.py so there is exactly one definition of
+    it. Duplicating it here is how the two would drift apart, and a re-import
+    silently reverting the external-content conversion is precisely the failure
+    this avoids.
+    """
+    print("\n🔍 Creating FTS5 full-text search indexes (external content)...")
+
+    # A trigger that writes to a virtual table requires a trusted schema.
+    conn.execute("PRAGMA trusted_schema=ON")
+    for statement in build_fts_statements():
+        conn.execute(statement)
+    conn.commit()
+
+    for fts, src, _is_view, _base, _cols in FTS_SPECS:
         try:
-            cur.execute(f"DROP TABLE IF EXISTS {table}")
-        except:
-            pass
-
-    # Legislation FTS
-    try:
-        cur.execute("""
-            CREATE VIRTUAL TABLE search_legislation USING fts5(
-                bill_id, title, summary, status, policy_area, sponsors
-            )
-        """)
-        cur.execute("""
-            INSERT INTO search_legislation(rowid, bill_id, title, summary, status, policy_area, sponsors)
-            SELECT rowid, bill_id, title, COALESCE(summary,''), status,
-                   COALESCE(json_extract(metadata, '$.policy_area'),''),
-                   COALESCE(json_extract(metadata, '$.sponsors'),'')
-            FROM legislation
-        """)
-        count = cur.execute("SELECT COUNT(*) FROM search_legislation").fetchone()[0]
-        print(f"  ✓ search_legislation: {count} bills indexed")
-    except Exception as e:
-        print(f"  ⚠ search_legislation: {e}")
-
-    # Entities FTS
-    try:
-        cur.execute("""
-            CREATE VIRTUAL TABLE search_entities USING fts5(
-                name, type, description, lean
-            )
-        """)
-        cur.execute("""
-            INSERT INTO search_entities(rowid, name, type, description, lean)
-            SELECT rowid, name, type, COALESCE(description,''), COALESCE(lean,'')
-            FROM entities
-        """)
-        count = cur.execute("SELECT COUNT(*) FROM search_entities").fetchone()[0]
-        print(f"  ✓ search_entities: {count} entities indexed")
-    except Exception as e:
-        print(f"  ⚠ search_entities: {e}")
-
-    # Donors FTS
-    try:
-        cur.execute("""
-            CREATE VIRTUAL TABLE search_donors USING fts5(
-                donor_name, industry, source
-            )
-        """)
-        cur.execute("""
-            INSERT INTO search_donors(rowid, donor_name, industry, source)
-            SELECT rowid, donor_name, COALESCE(industry,''), COALESCE(source,'')
-            FROM donors
-        """)
-        count = cur.execute("SELECT COUNT(*) FROM search_donors").fetchone()[0]
-        print(f"  ✓ search_donors: {count} donors indexed")
-    except Exception as e:
-        print(f"  ⚠ search_donors: {e}")
-
-    # Policy Papers FTS
-    try:
-        cur.execute("""
-            CREATE VIRTUAL TABLE search_papers USING fts5(
-                title, summary, topic_tags
-            )
-        """)
-        cur.execute("""
-            INSERT INTO search_papers(rowid, title, summary, topic_tags)
-            SELECT rowid, title, COALESCE(summary,''), COALESCE(topic_tags,'')
-            FROM policy_papers
-        """)
-        count = cur.execute("SELECT COUNT(*) FROM search_papers").fetchone()[0]
-        print(f"  ✓ search_papers: {count} papers indexed")
-    except Exception as e:
-        print(f"  ⚠ search_papers: {e}")
+            count = conn.execute(f"SELECT COUNT(*) FROM {fts}").fetchone()[0]
+            conn.execute(f"INSERT INTO {fts}({fts}) VALUES('integrity-check')")
+            print(f"  ✓ {fts}: {count} rows indexed from {src}")
+        except Exception as e:
+            print(f"  ⚠ {fts}: {e}")
 
     conn.commit()
 
