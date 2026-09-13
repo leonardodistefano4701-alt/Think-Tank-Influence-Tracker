@@ -1,10 +1,29 @@
+# Secrets
 .env
+.env.local
+.env.*.local
+
+# Dependencies / build output
 node_modules/
+.next/
+.vercel/
+*.tsbuildinfo
 __pycache__/
 *.pyc
-.next/
 .venv/
 venv/
-!ttit.db
+.pytest_cache/
+.ruff_cache/
+
+# SQLite sidecars (the database itself is tracked at web/data/ttit.db)
+*.db-wal
+*.db-shm
+*.db-journal
+
+# Generated exports
+/exports/
+*.xlsx
+*.pdf
+
 .DS_Store
 *.log

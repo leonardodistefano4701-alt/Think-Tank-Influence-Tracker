@@ -13,7 +13,9 @@ API_KEY = os.environ.get("PERPLEXITY_API_KEY", "").strip('"').strip("'")
 if not API_KEY:
     raise ValueError("PERPLEXITY_API_KEY is not set.")
 
-db_path = os.path.join(os.path.dirname(__file__), "..", "ttit.db")
+db_path = os.environ.get(
+    "DB_PATH", os.path.join(os.path.dirname(__file__), "..", "web", "data", "ttit.db")
+)
 
 MODEL_NAME = "sonar-pro"
 API_URL = "https://api.perplexity.ai/chat/completions"

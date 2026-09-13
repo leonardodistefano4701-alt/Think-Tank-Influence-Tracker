@@ -7,7 +7,9 @@ import sys, os, uuid, sqlite3, json, urllib.request, time, xml.etree.ElementTree
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'data-pipeline', 'src'))
 from db import get_db
 
-API_KEY = os.environ.get('FEC_API_KEY', 'kOL6CKT2XB7yJCZXTyoEkfUZ2TacsdRYcp4y8hKI')
+# Never default a credential. A fallback key means the script silently works
+# without .env, which is how the original key stayed leaked without anyone noticing.
+API_KEY = os.environ.get('FEC_API_KEY', '')
 GOVINFO_BASE = 'https://api.govinfo.gov'
 
 def uid():

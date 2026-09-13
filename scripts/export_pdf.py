@@ -2,7 +2,10 @@ from fpdf import FPDF
 import sqlite3
 import os
 
-DB_PATH = os.path.join(os.path.dirname(__file__), '..', 'ttit.db')
+DB_PATH = os.environ.get(
+    'DB_PATH',
+    os.path.join(os.path.dirname(__file__), '..', 'web', 'data', 'ttit.db'),
+)
 
 def generate_pdf():
     if not os.path.exists(DB_PATH):

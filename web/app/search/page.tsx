@@ -1,8 +1,9 @@
 import { getDb } from "@/lib/db";
-import { Entity, Donor, InfluenceLink } from "@/lib/types";
+import type { LegislationRow, PolicyPaperRow, LobbyingRow, InfluenceLinkRow, DonationRow } from "@/lib/rows";
+import { Entity } from "@/lib/types";
 import ProfileCard from "@/components/ProfileCard";
 import Link from "next/link";
-import { Search, DollarSign, FileText, Scale, AlertTriangle, Building2, Link2, Megaphone } from "lucide-react";
+import { Megaphone } from "lucide-react";
 
 export const dynamic = 'force-dynamic';
 
@@ -11,13 +12,17 @@ function formatDollar(val: number | null) {
   return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', notation: 'compact', maximumFractionDigits: 1 }).format(val);
 }
 
-function highlightMatch(text: string, query: string) {
-  if (!query || !text) return text;
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  const parts = text.split(regex);
+function highlightMatch(text: string | null | undefined, query: string) {
+  if (!query || !text) return text ?? null;
+  const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const parts = text.split(new RegExp(`(${escaped})`, 'gi'));
+  // Compare case-insensitively rather than re-testing with a /g/ regex: a
+  // global regex carries lastIndex across .test() calls, so every other match
+  // used to report false and silently lose its highlight.
+  const needle = query.toLowerCase();
   return parts.map((part, i) =>
-    regex.test(part)
-      ? <mark key={i} className="bg-primary/30 text-white rounded px-0.5">{part}</mark>
+    part.toLowerCase() === needle
+      ? <mark key={i} className="bg-accent-wash text-foreground rounded px-0.5">{part}</mark>
       : part
   );
 }
@@ -25,7 +30,7 @@ function highlightMatch(text: string, query: string) {
 export default async function SearchPage({
   searchParams,
 }: {
-  searchParams: { q?: string };
+  searchParams: Promise<{ q?: string }>;
 }) {
   const resolvedParams = await searchParams;
   const q = resolvedParams.q || "";
@@ -62,7 +67,7 @@ export default async function SearchPage({
   }
 
   // ── Donor search ─────────────────────────────────────────────────
-  let donors: (Donor & { tank_name: string; tank_slug: string })[] = [];
+  let donors: DonationRow[] = [];
   if (q) {
     donors = db.prepare(`
       SELECT d.*, e.name as tank_name, e.slug as tank_slug
@@ -71,11 +76,11 @@ export default async function SearchPage({
       WHERE d.donor_name LIKE ? OR d.industry LIKE ? OR d.source LIKE ?
       ORDER BY d.amount DESC
       LIMIT 20
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as any[];
+    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as DonationRow[];
   }
 
   // ── Legislation search (FTS5 powered) ─────────────────────────────
-  let legislation: any[] = [];
+  let legislation: LegislationRow[] = [];
   if (q) {
     if (hasFts) {
       try {
@@ -85,17 +90,17 @@ export default async function SearchPage({
           WHERE search_legislation MATCH ?
           ORDER BY sl.rank
           LIMIT 30
-        `).all(ftsQuery) as any[];
+        `).all(ftsQuery) as LegislationRow[];
       } catch {
-        legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as any[];
+        legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as LegislationRow[];
       }
     } else {
-      legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as any[];
+      legislation = db.prepare(`SELECT * FROM legislation WHERE title LIKE ? OR bill_id LIKE ? LIMIT 30`).all(`%${q}%`, `%${q}%`) as LegislationRow[];
     }
   }
 
   // ── Policy Paper search ──────────────────────────────────────────
-  let papers: any[] = [];
+  let papers: PolicyPaperRow[] = [];
   if (q) {
     papers = db.prepare(`
       SELECT pp.*, e.name as tank_name, e.slug as tank_slug
@@ -104,11 +109,11 @@ export default async function SearchPage({
       WHERE pp.title LIKE ? OR pp.summary LIKE ? OR pp.topic_tags LIKE ?
       ORDER BY pp.published_date DESC
       LIMIT 20
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as any[];
+    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as PolicyPaperRow[];
   }
 
   // ── Lobbying search ──────────────────────────────────────────────
-  let lobbying: any[] = [];
+  let lobbying: LobbyingRow[] = [];
   if (q) {
     lobbying = db.prepare(`
       SELECT lb.*, e.name as tank_name, e.slug as tank_slug
@@ -117,11 +122,11 @@ export default async function SearchPage({
       WHERE lb.registrant_name LIKE ? OR lb.issue_description LIKE ? OR lb.client_name LIKE ?
       ORDER BY lb.amount DESC
       LIMIT 20
-    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as any[];
+    `).all(`%${q}%`, `%${q}%`, `%${q}%`) as LobbyingRow[];
   }
 
   // ── Influence links search ───────────────────────────────────────
-  let influenceLinks: any[] = [];
+  let influenceLinks: InfluenceLinkRow[] = [];
   if (q) {
     influenceLinks = db.prepare(`
       SELECT il.*, 
@@ -136,7 +141,7 @@ export default async function SearchPage({
       WHERE il.evidence LIKE ? OR il.link_type LIKE ?
       ORDER BY il.strength DESC
       LIMIT 20
-    `).all(`%${q}%`, `%${q}%`) as any[];
+    `).all(`%${q}%`, `%${q}%`) as InfluenceLinkRow[];
   }
 
   const totalResults = entities.length + donors.length + legislation.length + papers.length + lobbying.length + influenceLinks.length;
@@ -144,11 +149,10 @@ export default async function SearchPage({
   return (
     <div className="flex flex-col gap-8 py-8">
       {/* Search Header */}
-      <div className="glass p-6 rounded-2xl">
+      <div className="bg-surface border border-border rounded-md p-5">
         <div className="flex items-center gap-3 mb-2">
-          <Search className="w-6 h-6 text-primary" />
-          <h1 className="text-3xl font-extrabold tracking-tight">
-            Results for &ldquo;<span className="text-primary">{q}</span>&rdquo;
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Results for &ldquo;<span className="text-accent">{q}</span>&rdquo;
           </h1>
         </div>
         <p className="text-muted">
@@ -166,12 +170,12 @@ export default async function SearchPage({
         {/* Quick nav */}
         {totalResults > 0 && (
           <div className="flex gap-2 mt-3 flex-wrap">
-            {entities.length > 0 && <a href="#entities" className="px-3 py-1 rounded-lg bg-primary/20 text-primary text-sm hover:bg-primary/30 transition-colors">Entities ({entities.length})</a>}
-            {donors.length > 0 && <a href="#donors" className="px-3 py-1 rounded-lg bg-green-500/20 text-green-400 text-sm hover:bg-green-500/30 transition-colors">Donors ({donors.length})</a>}
-            {legislation.length > 0 && <a href="#legislation" className="px-3 py-1 rounded-lg bg-yellow-500/20 text-yellow-400 text-sm hover:bg-yellow-500/30 transition-colors">Legislation ({legislation.length})</a>}
-            {papers.length > 0 && <a href="#papers" className="px-3 py-1 rounded-lg bg-blue-500/20 text-blue-400 text-sm hover:bg-blue-500/30 transition-colors">Policy Papers ({papers.length})</a>}
-            {lobbying.length > 0 && <a href="#lobbying" className="px-3 py-1 rounded-lg bg-orange-500/20 text-orange-400 text-sm hover:bg-orange-500/30 transition-colors">Lobbying ({lobbying.length})</a>}
-            {influenceLinks.length > 0 && <a href="#links" className="px-3 py-1 rounded-lg bg-purple-500/20 text-purple-400 text-sm hover:bg-purple-500/30 transition-colors">Influence Links ({influenceLinks.length})</a>}
+            {entities.length > 0 && <a href="#entities" className="px-3 py-1 rounded-sm bg-accent-wash text-accent text-sm hover:bg-accent-wash transition-colors">Entities ({entities.length})</a>}
+            {donors.length > 0 && <a href="#donors" className="px-3 py-1 rounded-sm bg-enacted-wash text-enacted text-sm hover:bg-enacted-wash transition-colors">Donors ({donors.length})</a>}
+            {legislation.length > 0 && <a href="#legislation" className="px-3 py-1 rounded-sm bg-progress-wash text-progress text-sm hover:bg-progress-wash transition-colors">Legislation ({legislation.length})</a>}
+            {papers.length > 0 && <a href="#papers" className="px-3 py-1 rounded-sm bg-accent-wash text-accent text-sm hover:bg-accent-wash transition-colors">Policy papers ({papers.length})</a>}
+            {lobbying.length > 0 && <a href="#lobbying" className="px-3 py-1 rounded-sm bg-demo-wash text-demo text-sm hover:bg-demo-wash transition-colors">Lobbying ({lobbying.length})</a>}
+            {influenceLinks.length > 0 && <a href="#links" className="px-3 py-1 rounded-sm bg-ai-wash text-ai text-sm hover:bg-ai-wash transition-colors">Influence links ({influenceLinks.length})</a>}
           </div>
         )}
       </div>
@@ -179,8 +183,7 @@ export default async function SearchPage({
       {/* ── Entities ─────────────────────────────────────────────────── */}
       {entities.length > 0 && (
         <section id="entities">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Building2 className="w-5 h-5 text-primary" />
+          <h2 className="text-lg font-semibold tracking-tight mb-4">
             Think Tanks & Entities
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -194,30 +197,29 @@ export default async function SearchPage({
       {/* ── Donors ───────────────────────────────────────────────────── */}
       {donors.length > 0 && (
         <section id="donors">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-green-400" />
+          <h2 className="text-lg font-semibold tracking-tight mb-4">
             Donors
           </h2>
           <div className="flex flex-col gap-2">
             {donors.map((d, i) => (
-              <div key={d.id} className="glass p-4 rounded-xl flex items-center justify-between hover:border-primary/30 transition-colors">
+              <div key={d.id} className="bg-surface border border-border p-4 rounded-md flex items-center justify-between hover:border-accent/25 transition-colors">
                 <div className="flex items-center gap-3 flex-1 min-w-0">
                   <span className="text-xs font-mono text-muted">#{i + 1}</span>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
-                      <Link prefetch={false} href={`/donors/${d.id}`} className="font-bold text-white hover:text-primary transition-colors">{highlightMatch(d.donor_name, q)}</Link>
+                      <Link prefetch={false} href={`/donors/${d.id}`} className="font-bold text-foreground hover:text-accent transition-colors">{highlightMatch(d.donor_name, q)}</Link>
                       {d.is_foreign_govt === 1 && (
-                        <span className="px-1.5 py-0.5 bg-red-500/20 text-red-400 text-[10px] font-bold rounded-md uppercase flex-shrink-0">Foreign</span>
+                        <span className="px-1.5 py-0.5 bg-failed-wash text-failed text-2xs font-bold rounded-md uppercase flex-shrink-0">Foreign</span>
                       )}
                     </div>
                     <div className="text-xs text-muted flex gap-3 mt-0.5">
                       <span>{highlightMatch(d.industry || '', q)}</span>
-                      <span>→ <Link prefetch={false} href={`/think-tanks/${d.tank_slug}`} className="text-primary hover:underline">{d.tank_name}</Link></span>
+                      <span>→ <Link prefetch={false} href={`/think-tanks/${d.tank_slug}`} className="text-accent hover:underline">{d.tank_name}</Link></span>
                       {d.year && <span>({d.year})</span>}
                     </div>
                   </div>
                 </div>
-                <span className="font-bold text-primary text-lg">{formatDollar(d.amount)}</span>
+                <span className="font-bold text-accent text-lg">{formatDollar(d.amount)}</span>
               </div>
             ))}
           </div>
@@ -227,25 +229,24 @@ export default async function SearchPage({
       {/* ── Legislation ──────────────────────────────────────────────── */}
       {legislation.length > 0 && (
         <section id="legislation">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Scale className="w-5 h-5 text-yellow-400" />
+          <h2 className="text-lg font-semibold tracking-tight mb-4">
             Legislation
           </h2>
           <div className="flex flex-col gap-2">
             {legislation.map(leg => (
-              <div key={leg.id} className="glass p-4 rounded-xl hover:border-primary/30 transition-colors">
+              <div key={leg.id} className="bg-surface border border-border p-4 rounded-md hover:border-accent/25 transition-colors">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-1 flex-wrap">
                       <span className="font-mono text-xs text-muted">{highlightMatch(leg.bill_id, q)}</span>
-                      <Link prefetch={false} href={`/legislation/${leg.id}`} className="font-bold text-white hover:text-yellow-400 transition-colors">{highlightMatch(leg.title, q)}</Link>
+                      <Link prefetch={false} href={`/legislation/${leg.id}`} className="font-bold text-foreground hover:text-progress transition-colors">{highlightMatch(leg.title, q)}</Link>
                     </div>
                     <p className="text-sm text-muted line-clamp-2">{highlightMatch(leg.summary || '', q)}</p>
                   </div>
                   <span className={`px-2 py-0.5 text-xs font-bold rounded-md whitespace-nowrap ${
-                    leg.status === 'Signed into Law' ? 'bg-green-500/20 text-green-400' :
-                    leg.status === 'Passed House' ? 'bg-yellow-500/20 text-yellow-400' :
-                    'bg-gray-500/20 text-gray-400'
+                    leg.status === 'Signed into Law' ? 'bg-enacted-wash text-enacted' :
+                    leg.status === 'Passed House' ? 'bg-progress-wash text-progress' :
+                    'bg-surface-sunken text-muted'
                   }`}>{leg.status}</span>
                 </div>
               </div>
@@ -254,23 +255,22 @@ export default async function SearchPage({
         </section>
       )}
 
-      {/* ── Policy Papers ────────────────────────────────────────────── */}
+      {/* ── Policy papers ────────────────────────────────────────────── */}
       {papers.length > 0 && (
         <section id="papers">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <FileText className="w-5 h-5 text-blue-400" />
-            Policy Papers
+          <h2 className="text-lg font-semibold tracking-tight mb-4">
+            Policy papers
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             {papers.map(p => (
-              <div key={p.id} className="glass p-4 rounded-xl hover:border-primary/30 transition-colors">
-                <div className="font-bold text-white mb-1">{highlightMatch(p.title, q)}</div>
+              <div key={p.id} className="bg-surface border border-border p-4 rounded-md hover:border-accent/25 transition-colors">
+                <div className="font-bold text-foreground mb-1">{highlightMatch(p.title, q)}</div>
                 <p className="text-sm text-muted line-clamp-2 mb-2">{highlightMatch(p.summary || '', q)}</p>
                 <div className="flex items-center justify-between">
-                  <Link prefetch={false} href={`/think-tanks/${p.tank_slug}`} className="text-xs text-primary hover:underline">{p.tank_name}</Link>
+                  <Link prefetch={false} href={`/think-tanks/${p.tank_slug}`} className="text-xs text-accent hover:underline">{p.tank_name}</Link>
                   <div className="flex gap-1">
                     {(p.topic_tags || '').split(',').map((tag: string) => (
-                      <span key={tag} className="px-1.5 py-0.5 text-[10px] bg-card-border rounded-md text-muted">{highlightMatch(tag.trim(), q)}</span>
+                      <span key={tag} className="px-1.5 py-0.5 text-2xs bg-surface-sunken rounded-md text-muted">{highlightMatch(tag.trim(), q)}</span>
                     ))}
                   </div>
                 </div>
@@ -283,20 +283,20 @@ export default async function SearchPage({
       {/* ── Lobbying ─────────────────────────────────────────────────── */}
       {lobbying.length > 0 && (
         <section id="lobbying">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Megaphone className="w-5 h-5 text-orange-400" />
+          <h2 className="text-lg font-semibold tracking-tight mb-4">
+            <Megaphone className="w-5 h-5 text-muted" />
             Lobbying Disclosures
           </h2>
           <div className="flex flex-col gap-2">
             {lobbying.map(lb => (
-              <div key={lb.id} className="glass p-4 rounded-xl hover:border-primary/30 transition-colors">
+              <div key={lb.id} className="bg-surface border border-border p-4 rounded-md hover:border-accent/25 transition-colors">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="font-bold text-white">{highlightMatch(lb.registrant_name, q)}</span>
-                    <span className="text-muted text-sm ml-2">→ <Link prefetch={false} href={`/think-tanks/${lb.tank_slug}`} className="text-primary hover:underline">{lb.tank_name}</Link></span>
+                    <span className="font-bold text-foreground">{highlightMatch(lb.registrant_name, q)}</span>
+                    <span className="text-muted text-sm ml-2">→ <Link prefetch={false} href={`/think-tanks/${lb.tank_slug}`} className="text-accent hover:underline">{lb.tank_name}</Link></span>
                     <p className="text-sm text-muted mt-1">{highlightMatch(lb.issue_description || '', q)}</p>
                   </div>
-                  <span className="font-bold text-orange-400">{formatDollar(lb.amount)}</span>
+                  <span className="font-bold text-demo">{formatDollar(lb.amount)}</span>
                 </div>
               </div>
             ))}
@@ -304,28 +304,27 @@ export default async function SearchPage({
         </section>
       )}
 
-      {/* ── Influence Links ──────────────────────────────────────────── */}
+      {/* ── Influence links ──────────────────────────────────────────── */}
       {influenceLinks.length > 0 && (
         <section id="links">
-          <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
-            <Link2 className="w-5 h-5 text-purple-400" />
-            Influence Links
+          <h2 className="text-lg font-semibold tracking-tight mb-4">
+            Influence links
           </h2>
           <div className="flex flex-col gap-2">
             {influenceLinks.map((link, i) => (
-              <div key={i} className="glass p-4 rounded-xl hover:border-primary/30 transition-colors">
+              <div key={i} className="bg-surface border border-border p-4 rounded-md hover:border-accent/25 transition-colors">
                 <div className="flex items-center gap-3 mb-2">
-                  <span className="text-sm text-white font-semibold">{link.source_name || 'Unknown'}</span>
-                  <span className={`px-1.5 py-0.5 text-[10px] font-bold rounded uppercase tracking-wider ${
-                    link.link_type === 'advocates_for' ? 'bg-green-500/20 text-green-400' :
-                    link.link_type === 'opposes' ? 'bg-red-500/20 text-red-400' :
-                    link.link_type === 'informs' ? 'bg-blue-500/20 text-blue-400' :
-                    'bg-gray-500/20 text-gray-400'
+                  <span className="text-sm text-foreground font-semibold">{link.source_name || 'Unknown'}</span>
+                  <span className={`px-1.5 py-0.5 text-2xs font-bold rounded uppercase tracking-wider ${
+                    link.link_type === 'advocates_for' ? 'bg-enacted-wash text-enacted' :
+                    link.link_type === 'opposes' ? 'bg-failed-wash text-failed' :
+                    link.link_type === 'informs' ? 'bg-accent-wash text-accent' :
+                    'bg-surface-sunken text-muted'
                   }`}>{link.link_type?.replace("_", " ")}</span>
-                  <span className="text-sm text-white font-semibold">{link.target_name || 'Unknown'}</span>
+                  <span className="text-sm text-foreground font-semibold">{link.target_name || 'Unknown'}</span>
                   <div className="ml-auto flex items-center gap-2">
-                    <div className="w-16 h-1.5 rounded-full bg-card-border overflow-hidden">
-                      <div className={`h-full rounded-full ${(link.strength || 0) >= 0.85 ? 'bg-red-500' : (link.strength || 0) >= 0.6 ? 'bg-yellow-500' : 'bg-green-500'}`}
+                    <div className="w-16 h-1.5 rounded-full bg-surface-sunken overflow-hidden">
+                      <div className={`h-full rounded-full bg-accent`}
                         style={{ width: `${Math.round((link.strength || 0) * 100)}%` }} />
                     </div>
                     <span className="text-xs text-muted">{Math.round((link.strength || 0) * 100)}%</span>
@@ -340,7 +339,7 @@ export default async function SearchPage({
 
       {/* Back Link */}
       <div className="mt-4">
-        <Link prefetch={false} href="/" className="text-primary hover:underline flex items-center gap-1">
+        <Link prefetch={false} href="/" className="text-accent hover:underline flex items-center gap-1">
           ← Back home
         </Link>
       </div>
