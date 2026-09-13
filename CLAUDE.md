@@ -35,26 +35,26 @@ Donor → Think Tank → Policy Paper → Media Amplifier → Politician Vote/Bi
 
 ## 3. API KEYS & ENDPOINTS
 
-> ⚠️ These are real keys. Keep them in `.env` files, never commit to git.
+> ⚠️ Keys live only in `.env` (copy `.env.example`). Never paste a real key into this file or any other tracked file — this repo is public.
 
 ### 3a. Data Pipeline APIs
 
 | API | Base URL | Key / Auth | Purpose |
 |---|---|---|---|
-| **FEC (Federal Election Commission)** | `https://api.open.fec.gov/v1/` | `DJ9DliADMQgEOIh4gvid7c8dLTUuUwklD5BjwdgD` | Campaign finance: candidate receipts, PAC contributions, independent expenditures |
+| **FEC (Federal Election Commission)** | `https://api.open.fec.gov/v1/` | `FEC_API_KEY` (in `.env`) | Campaign finance: candidate receipts, PAC contributions, independent expenditures |
 | **ProPublica Nonprofit Explorer** | `https://projects.propublica.org/nonprofits/api/v2/` | None (free, no key) | IRS 990 filings: think tank revenue, expenses, executive compensation, grants |
 | **Congress.gov API** | `https://api.congress.gov/v3/` | Use FEC key or get separate key at api.data.gov | Bills, votes, members, committees |
 | **OpenCorporates** | `https://api.opencorporates.com/v0.4/` | None (free tier) | Corporate entity resolution — tie donor names to parent companies |
 | **NAICS API** | `https://naicsapi.docs.apiary.io/` | None (free) | Industry classification codes → map donors to sectors (fossil fuel, defense, etc.) |
 | **USAspending** | `https://api.usaspending.gov/api/v2/` | None (free) | Federal contracts & grants by recipient — quantify govt revenue dependency |
-| **Senate LDA (Lobbying)** | `https://lda.senate.gov/api/v1/` | `f62bbb8217f8ca89c8389672be7b59154d693eaf` | Lobbying disclosures: client, issue, spend amount |
-| **NY Times** | `https://api.nytimes.com/svc/` | Key: `vvJKq0V4ngNCGkMh2G6KeNHhsJdrfj5kY4f2Zuixi1XCfm1h` / Secret: `vKxxGXLozGvHbtFNQEypPTOyA6JhXPCk63lgbGoxWY6Y33L9l7ZMPgsz50kBJrSG` | Article search — trace media coverage of think tank policy positions |
+| **Senate LDA (Lobbying)** | `https://lda.senate.gov/api/v1/` | `SENATE_LDA_API_KEY` (in `.env`) | Lobbying disclosures: client, issue, spend amount |
+| **NY Times** | `https://api.nytimes.com/svc/` | `NYT_API_KEY` / `NYT_API_SECRET` (in `.env`) | Article search — trace media coverage of think tank policy positions |
 
 ### 3b. AI / LLM
 
 | Service | Model | Key |
 |---|---|---|
-| **OpenRouter** | `minimax/highspeed` | `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` |
+| **OpenRouter** | `minimax/highspeed` | `OPENROUTER_API_KEY` (in `.env`) |
 
 ### 3c. Infrastructure
 
