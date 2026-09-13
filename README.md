@@ -74,9 +74,17 @@ carries a default credential.
 
 ## Deployment
 
-Deploys to Vercel with the `web/` directory as the project root. The SQLite file
-is pulled into the serverless bundle through `outputFileTracingIncludes` in
-`web/next.config.ts`; without that the function cannot open it.
+Deploys to Railway from the root `Dockerfile`, which builds the Next.js app in
+standalone mode and copies `web/data/ttit.db` into the image at
+`/app/data/ttit.db` (the path `DB_PATH` points to). Vercel Git deployments are
+switched off in `web/vercel.json`.
+
+To run the production image locally:
+
+```bash
+docker build -t ttit .
+docker run --rm -p 3000:3000 ttit
+```
 
 ## Known limitations
 

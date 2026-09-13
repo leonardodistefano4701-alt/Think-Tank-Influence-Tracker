@@ -6,12 +6,9 @@ import path from 'path';
  * The database is a read-only, immutable build artifact that ships inside the
  * deployment, so it is opened once per process and reused.
  *
- * It previously lived at the repo root and was resolved as
- * `path.resolve(process.cwd(), '../ttit.db')`. That path is outside the Next
- * project root, so Next's file tracer never bundled it and the file did not
- * exist at runtime on Vercel — every page threw SQLITE_CANTOPEN. It now lives
- * under web/data/ and is pulled in via outputFileTracingIncludes in
- * next.config.ts.
+ * The file lives at web/data/ttit.db. In the Docker image (Railway) the
+ * Dockerfile copies it to /app/data/ttit.db and sets DB_PATH; locally it is
+ * found under web/data/ relative to the working directory.
  *
  * A new Database() per request also leaked a file descriptor on every request,
  * because nothing ever called .close().
