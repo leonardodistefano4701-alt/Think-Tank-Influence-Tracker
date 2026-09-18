@@ -29,7 +29,7 @@ const TABLES: { name: string; label: string; note: string }[] = [
   { name: "financials", label: "Financials", note: "IRS Form 990 filings retrieved from the ProPublica Nonprofit Explorer API." },
   { name: "legislation", label: "Legislation", note: "Bill records and action histories from GovInfo BILLSTATUS bulk data." },
   { name: "donors", label: "Donors", note: "Hand-authored demonstration rows. No donor collector has been implemented." },
-  { name: "lobbying", label: "Lobbying", note: "Hand-authored. The Senate LDA collector is not implemented." },
+  { name: "lobbying", label: "Lobbying", note: "Collected directly via Senate LDA API (lda.senate.gov/api) querying exact registrant and client names." },
   { name: "policy_papers", label: "Policy papers", note: "Surfaced by prompting a language model, not by crawling publisher sites." },
   { name: "influence_links", label: "Influence links", note: "Either hand-authored or asserted by a language model." },
   { name: "analysis_verdicts", label: "AI verdicts", note: "Language model output. Not reviewed against primary sources." },

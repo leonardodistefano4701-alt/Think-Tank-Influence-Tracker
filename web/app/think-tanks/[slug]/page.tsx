@@ -99,7 +99,7 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
             <p className="text-xl text-muted max-w-3xl">{entity.description || 'Tracked nonprofit policy organization.'}</p>
             <div className="flex gap-6 mt-4 text-sm text-muted flex-wrap">
               {entity.ein && <div><span className="font-bold text-foreground">EIN:</span> {entity.ein}</div>}
-              <div><span className="font-bold text-foreground">Entity Type:</span> Think Tank</div>
+              <div><span className="font-bold text-foreground">Entity Type:</span> {entity.type === "affiliated_entity" ? "Affiliated 501(c)(4) Organization" : "Think Tank"}</div>
               <div><span className="font-bold text-foreground">Tracked Donors:</span> {donors.length}</div>
             </div>
           </div>
@@ -111,7 +111,7 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
           { label: "Tracked donations", value: formatDollar(totalDonorAmount), hint: "demo data" },
           { label: "Influence links", value: influenceLinks.length },
           { label: "Policy papers", value: policyPapers.length },
-          { label: "Foreign gov't donors", value: foreignDonors.length },
+          { label: "Lobbying spend", value: lobbying.length > 0 ? formatDollar(lobbying.reduce((s, l) => s + (l.amount || 0), 0)) : "No LDA filings" },
         ]}
       />
 
@@ -222,30 +222,78 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
       )}
 
       {/* ── Lobbying Activity ──────────────────────────────────────── */}
-      {lobbying.length > 0 && (
-        <div className="bg-surface border border-border rounded-md p-5">
-          <h3 className="text-lg font-semibold tracking-tight mb-4">
+      <div className="bg-surface border border-border rounded-md p-5">
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+          <h3 className="text-lg font-semibold tracking-tight">
             Lobbying Disclosures
+            <span className="text-sm font-normal text-muted ml-2">
+              {lobbying.length > 0 ? `(${lobbying.length} verified filings)` : "(No LDA filings)"}
+            </span>
           </h3>
-          <div className="flex flex-col gap-3">
+          {lobbying.length > 0 && (
+            <span className="text-sm font-bold text-accent">
+              Total: {formatDollar(lobbying.reduce((sum, l) => sum + (l.amount || 0), 0))}
+            </span>
+          )}
+        </div>
+
+        {entity.slug === 'heritage-foundation' && (
+          <div className="mb-4 p-3 bg-accent-wash/30 border border-accent/20 rounded-sm text-xs text-muted leading-relaxed">
+            The Heritage Foundation is a 501(c)(3) research and educational institution with 4 historical filings. Direct legislative advocacy and lobbying on its policy priorities is conducted primarily by its affiliated 501(c)(4) advocacy arm, <Link href="/think-tanks/heritage-action-for-america" className="text-accent underline font-semibold">Heritage Action for America</Link> (71 verified LDA filings).
+          </div>
+        )}
+
+        {entity.slug === 'heritage-action-for-america' && (
+          <div className="mb-4 p-3 bg-accent-wash/30 border border-accent/20 rounded-sm text-xs text-muted leading-relaxed">
+            Heritage Action for America is a 501(c)(4) social welfare and advocacy organization affiliated with the <Link href="/think-tanks/heritage-foundation" className="text-accent underline font-semibold">Heritage Foundation</Link>. All 71 filings below are queried from the Senate Office of Public Records LDA database.
+          </div>
+        )}
+
+        {lobbying.length > 0 ? (
+          <div className="flex flex-col gap-3 max-h-[500px] overflow-y-auto pr-1">
             {lobbying.map(lob => (
               <div key={lob.id} className="p-4 rounded-sm bg-surface-sunken flex items-start justify-between gap-4">
-                <div className="flex-1">
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="px-2 py-0.5 text-xs font-bold bg-surface-sunken rounded-md text-muted">{lob.issue_code}</span>
-                    <span className="font-semibold text-foreground">{lob.registrant_name}</span>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    {lob.issue_code && (
+                      <span className="px-2 py-0.5 text-xs font-bold bg-surface-sunken border border-border rounded-md text-foreground">{lob.issue_code}</span>
+                    )}
+                    <span className="font-semibold text-foreground">{lob.registrant_name || lob.client_name}</span>
+                    {lob.client_name && lob.registrant_name && lob.client_name !== lob.registrant_name && (
+                      <span className="text-xs text-muted">for {lob.client_name}</span>
+                    )}
                   </div>
-                  <p className="text-sm text-muted">{lob.issue_description}</p>
-                  <span className="text-xs text-muted mt-1 block">{lob.filing_year} • {lob.filing_period}</span>
+                  {lob.issue_description && (
+                    <p className="text-sm text-muted line-clamp-3 leading-relaxed">{lob.issue_description}</p>
+                  )}
+                  <div className="flex items-center gap-4 text-xs text-muted mt-2 flex-wrap">
+                    <span>{lob.filing_year} • {lob.filing_period}</span>
+                    {lob.source_url && (
+                      <a
+                        href={lob.source_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-accent hover:underline inline-flex items-center gap-1 font-mono text-2xs"
+                      >
+                        Senate LDA filing ↗
+                      </a>
+                    )}
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className="font-bold text-accent text-lg">{formatDollar(lob.amount)}</span>
+                <div className="text-right flex-shrink-0">
+                  <span className="font-bold text-accent text-lg">
+                    {lob.amount != null ? formatDollar(lob.amount) : "—"}
+                  </span>
                 </div>
               </div>
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="p-4 rounded-sm bg-surface-sunken text-sm text-muted leading-relaxed">
+            No LDA filings found for {entity.name}. 501(c)(3) tax-exempt nonprofits are strictly limited in direct lobbying activities under federal tax law and rarely maintain direct Senate LDA lobbying registrations.
+          </div>
+        )}
+      </div>
 
       {/* ── Foreign Funding Warning ────────────────────────────────── */}
       {foreignDonors.length > 0 && (

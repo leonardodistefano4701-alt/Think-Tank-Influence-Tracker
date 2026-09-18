@@ -91,6 +91,8 @@ export interface Lobbying {
   filing_year: number | null;
   filing_period: string | null;
   provenance?: Provenance;
+  filing_uuid?: string | null;
+  source_url?: string | null;
 }
 
 export interface PolicyPaper {

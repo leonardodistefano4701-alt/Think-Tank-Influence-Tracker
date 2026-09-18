@@ -23,6 +23,7 @@ interface TankStats {
   influenceCount: number;
   avgStrength: number;
   policyPaperCount: number;
+  lobbyingCount: number;
   lobbyingAmount: number;
   latestRevenue: number | null;
   topDonor: string;
@@ -35,7 +36,7 @@ function getStats(db: ReturnType<typeof getDb>, entity: Entity): TankStats {
   const donors = db.prepare("SELECT * FROM donors WHERE entity_id = ? AND (provenance IS NULL OR provenance != 'seeded_demo') ORDER BY amount DESC").all(entity.id) as DonationRow[];
   const links = db.prepare("SELECT * FROM influence_links WHERE source_id = ? AND source_type = 'think_tank' AND (provenance IS NULL OR provenance NOT IN ('seeded_demo', 'ai_generated'))").all(entity.id) as InfluenceLink[];
   const paperCount = db.prepare("SELECT COUNT(*) as cnt FROM policy_papers WHERE entity_id = ?").get(entity.id) as { cnt: number };
-  const lobbyTotal = db.prepare("SELECT SUM(amount) as total FROM lobbying WHERE client_entity_id = ? AND (provenance IS NULL OR provenance != 'seeded_demo')").get(entity.id) as { total: number | null };
+  const lobbyRow = db.prepare("SELECT COUNT(*) as cnt, SUM(amount) as total FROM lobbying WHERE client_entity_id = ? AND (provenance IS NULL OR provenance != 'seeded_demo')").get(entity.id) as { cnt: number; total: number | null };
   const latestFinancial = db.prepare("SELECT total_revenue FROM financials WHERE entity_id = ? ORDER BY fiscal_year DESC LIMIT 1").get(entity.id) as { total_revenue: number } | undefined;
 
   // Complex query to get actual legislation targeted by this think tank via its papers
@@ -62,7 +63,8 @@ function getStats(db: ReturnType<typeof getDb>, entity: Entity): TankStats {
     influenceCount: links.length,
     avgStrength,
     policyPaperCount: paperCount.cnt,
-    lobbyingAmount: lobbyTotal.total || 0,
+    lobbyingCount: lobbyRow.cnt,
+    lobbyingAmount: lobbyRow.total || 0,
     latestRevenue: latestFinancial?.total_revenue || null,
     topDonor: donors[0]?.donor_name || "—",
     topDonorAmount: donors[0]?.amount || 0,
@@ -156,7 +158,7 @@ export default async function ComparePage({
         <StatRow label="Legislative Influence links" valueA={statsA.influenceCount} valueB={statsB.influenceCount} />
         <StatRow label="Avg Influence Confidence" valueA={`${Math.round(statsA.avgStrength * 100)}%`} valueB={`${Math.round(statsB.avgStrength * 100)}%`} />
         <StatRow label="Policy papers" valueA={statsA.policyPaperCount} valueB={statsB.policyPaperCount} />
-        <StatRow label="Lobbying Spend" valueA={statsA.lobbyingAmount} valueB={statsB.lobbyingAmount} format="dollar" />
+        <StatRow label="Lobbying Spend" valueA={statsA.lobbyingCount === 0 ? "No LDA filings" : formatDollar(statsA.lobbyingAmount)} valueB={statsB.lobbyingCount === 0 ? "No LDA filings" : formatDollar(statsB.lobbyingAmount)} />
         <StatRow label="Latest Annual Revenue" valueA={statsA.latestRevenue ?? 0} valueB={statsB.latestRevenue ?? 0} format="dollar" />
       </div>
 
