@@ -293,8 +293,8 @@ def run():
             cur.execute("DELETE FROM influence_links WHERE source_type = 'policy_paper' AND source_id = ?", (pid,))
             removed_papers += 1
         else:
-            # Mark verified
-            cur.execute("UPDATE policy_papers SET provenance = 'verified_filing' WHERE id = ?", (pid,))
+            # R2: Never promote existing papers to verified_filing; keep/relabel as ai_generated
+            cur.execute("UPDATE policy_papers SET provenance = 'ai_generated' WHERE id = ?", (pid,))
             kept_papers += 1
             
     conn.commit()
