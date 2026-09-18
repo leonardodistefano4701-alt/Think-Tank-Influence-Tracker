@@ -156,7 +156,6 @@ export default async function ComparePage({
         <StatRow label="Foreign Gov't Donors" valueA={statsA.foreignDonorCount} valueB={statsB.foreignDonorCount} highlight={statsA.foreignDonorCount > 0 || statsB.foreignDonorCount > 0} />
         <StatRow label="Foreign Gov't Funding" valueA={statsA.foreignAmount} valueB={statsB.foreignAmount} format="dollar" highlight={statsA.foreignAmount > 0 || statsB.foreignAmount > 0} />
         <StatRow label="Legislative Influence links" valueA={statsA.influenceCount} valueB={statsB.influenceCount} />
-        <StatRow label="Avg Influence Confidence" valueA={`${Math.round(statsA.avgStrength * 100)}%`} valueB={`${Math.round(statsB.avgStrength * 100)}%`} />
         <StatRow label="Policy papers" valueA={statsA.policyPaperCount} valueB={statsB.policyPaperCount} />
         <StatRow label="Lobbying Spend" valueA={statsA.lobbyingCount === 0 ? "No LDA filings" : formatDollar(statsA.lobbyingAmount)} valueB={statsB.lobbyingCount === 0 ? "No LDA filings" : formatDollar(statsB.lobbyingAmount)} />
         <StatRow label="Latest Annual Revenue" valueA={statsA.latestRevenue ?? 0} valueB={statsB.latestRevenue ?? 0} format="dollar" />
@@ -190,7 +189,7 @@ export default async function ComparePage({
               </div>
               <div className="text-sm text-muted">
                 Composite score: {captureScore}/100, combining foreign funding exposure, donor
-                concentration, lobbying spend and average influence strength.
+                concentration, and lobbying spend.
               </div>
               <p className="text-xs text-muted/80 mt-3 leading-relaxed">
                 Not a risk rating. The four weights were chosen by hand and never validated, and

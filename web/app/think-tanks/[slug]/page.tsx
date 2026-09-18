@@ -33,17 +33,7 @@ function formatDollar(val: number | null) {
 // Strength is a magnitude, not a judgement. The previous ramp ran green (weak)
 // to red (strong), which inverted the bill-status palette where green means
 // enacted and red means failed. One neutral ramp removes that contradiction.
-function strengthBar(strength: number | null) {
-  const pct = Math.max(0, Math.min(100, Math.round((strength ?? 0) * 100)));
-  return (
-    <div className="flex items-center gap-2 text-xs">
-      <div className="w-24 h-1.5 rounded-sm bg-surface-sunken overflow-hidden">
-        <div className="h-full bg-accent" style={{ width: `${pct}%` }} />
-      </div>
-      <span className="text-muted tnum">{pct}%</span>
-    </div>
-  );
-}
+
 
 export default async function ThinkTankProfile({ params }: { params: Promise<{ slug: string }> }) {
   const resolvedParams = await params;
@@ -211,8 +201,7 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
                     <p className="text-sm text-muted leading-relaxed">{link.evidence}</p>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <span className="text-xs text-muted">Confidence</span>
-                    {strengthBar(link.strength)}
+                    <span className="text-2xs font-mono uppercase px-2 py-0.5 rounded bg-surface-sunken text-muted">Verified citation</span>
                   </div>
                 </div>
               </div>

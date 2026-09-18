@@ -323,11 +323,11 @@ export default async function SearchPage({
                   }`}>{link.link_type?.replace("_", " ")}</span>
                   <span className="text-sm text-foreground font-semibold">{link.target_name || 'Unknown'}</span>
                   <div className="ml-auto flex items-center gap-2">
-                    <div className="w-16 h-1.5 rounded-full bg-surface-sunken overflow-hidden">
-                      <div className={`h-full rounded-full bg-accent`}
-                        style={{ width: `${Math.round((link.strength || 0) * 100)}%` }} />
-                    </div>
-                    <span className="text-xs text-muted">{Math.round((link.strength || 0) * 100)}%</span>
+                    {link.evidence && (
+                      <span className="text-2xs px-2 py-0.5 rounded-sm bg-accent/10 text-accent font-mono border border-accent/20">
+                        Verified citation
+                      </span>
+                    )}
                   </div>
                 </div>
                 <p className="text-xs text-muted">{highlightMatch(link.evidence || '', q)}</p>

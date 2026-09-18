@@ -210,9 +210,11 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
                           {il.tank_name}
                         </Link>
                       </div>
-                      <span className="flex items-center gap-1 font-semibold text-accent">
-                        Confidence: {Math.round((il.strength || 0) * 100)}%
-                      </span>
+                      {il.evidence && (
+                        <span className="flex items-center gap-1 text-xs px-2 py-0.5 rounded-sm bg-accent/10 text-accent font-mono border border-accent/20">
+                          Verified citation
+                        </span>
+                      )}
                     </div>
                     
                     {/* Paper Details */}

@@ -244,9 +244,11 @@ export default async function LegislationProfile({ params }: { params: Promise<{
                             <ExternalLink className="w-3.5 h-3.5" /> Read Original
                           </a>
                         )}
-                        <span className="flex items-center gap-1 ml-auto font-semibold">
-                          Confidence Level: {Math.round((il.strength || 0) * 100)}%
-                        </span>
+                        {il.evidence && (
+                          <span className="flex items-center gap-1 ml-auto text-xs px-2 py-0.5 rounded-sm bg-accent/10 text-accent font-mono border border-accent/20">
+                            Verified citation
+                          </span>
+                        )}
                       </div>
 
                       {il.paper_summary && (

@@ -20,7 +20,6 @@ interface AIAnalysisProps {
  */
 export default function AIVerdictCard({ info }: { info: AIAnalysisProps | null }) {
   if (!info) return null;
-  const confidencePct = Math.round((info.confidence || 0) * 100);
 
   return (
     <aside className="border border-ai/25 bg-ai-wash/40 rounded-md">
@@ -55,9 +54,7 @@ export default function AIVerdictCard({ info }: { info: AIAnalysisProps | null }
 
         <p className="text-xs text-muted leading-relaxed border-t border-ai/15 pt-3">
           Unverified language-model output{info.modelUsed ? ` (${info.modelUsed})` : ""}. Not
-          checked against any filing. The {confidencePct}% is the model&apos;s own self-rating, not
-          a measure of evidence, and this is not a statement of fact about any named organization
-          or person.{" "}
+          checked against any filing. Model self-reported confidence scores are excluded in favor of checkable primary-source citations. This is not a statement of fact about any named organization or person.{" "}
           <Link href="/methodology" className="text-accent underline underline-offset-2">
             How to read this
           </Link>

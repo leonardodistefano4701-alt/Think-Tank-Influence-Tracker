@@ -425,7 +425,6 @@ export default async function AnalysisPage() {
               <div className="text-sm text-muted mt-1 flex gap-4">
                 <span>{tank.totalPapers} papers</span>
                 <span>{tank.chains.length} traced influence chains</span>
-                <span>Avg influence strength: {Math.round(tank.avgInfluenceStrength * 100)}%</span>
                 {tank.foreignDonorLinks > 0 && (
                   <span className="text-failed flex items-center gap-1">
                     <AlertTriangle className="w-3.5 h-3.5" />
@@ -461,9 +460,7 @@ export default async function AnalysisPage() {
                       </div>
                       <div className="text-xs text-muted">{chain.donor_industry}</div>
                     </div>
-                    <div className="text-xs text-muted">
-                      influence: <span className="font-bold text-foreground">{Math.round((chain.donor_to_paper_strength || 0) * 100)}%</span>
-                    </div>
+
                   </div>
 
                   {/* Arrow */}
@@ -493,7 +490,7 @@ export default async function AnalysisPage() {
                         <div className="w-0.5 h-4 bg-progress-wash" />
                         <ChevronRight className="w-3 h-3 text-progress/50" />
                         <span className="text-2xs text-muted uppercase tracking-wider">
-                          shapes legislation • {Math.round((chain.paper_to_leg_strength || 0) * 100)}% confidence
+                          shapes legislation
                         </span>
                       </div>
 

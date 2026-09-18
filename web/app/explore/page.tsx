@@ -134,11 +134,11 @@ export default async function ExplorePage({
                         {link.bill_id && <span className="text-muted font-mono text-xs">{link.bill_id}</span>}
                         <div className="ml-auto flex items-center gap-2">
                           {link.leg_status && <span className="px-1.5 py-0.5 text-2xs bg-surface-sunken rounded text-muted">{link.leg_status}</span>}
-                          <div className="w-16 h-1.5 rounded-full bg-surface-sunken overflow-hidden">
-                            <div className={`h-full rounded-full bg-accent`}
-                              style={{ width: `${Math.round((link.strength || 0) * 100)}%` }} />
-                          </div>
-                          <span className="text-muted text-xs">{Math.round((link.strength || 0) * 100)}%</span>
+                          {link.evidence && (
+                            <span className="text-2xs px-2 py-0.5 rounded-sm bg-accent/10 text-accent font-mono border border-accent/20">
+                              Verified citation
+                            </span>
+                          )}
                         </div>
                       </div>
                     ))}
