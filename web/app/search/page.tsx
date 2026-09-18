@@ -73,7 +73,7 @@ export default async function SearchPage({
       SELECT d.*, e.name as tank_name, e.slug as tank_slug
       FROM donors d
       JOIN entities e ON d.entity_id = e.id
-      WHERE d.donor_name LIKE ? OR d.industry LIKE ? OR d.source LIKE ?
+      WHERE (d.donor_name LIKE ? OR d.industry LIKE ? OR d.source LIKE ?) AND (d.provenance IS NULL OR d.provenance != 'seeded_demo')
       ORDER BY d.amount DESC
       LIMIT 20
     `).all(`%${q}%`, `%${q}%`, `%${q}%`) as DonationRow[];
@@ -119,7 +119,7 @@ export default async function SearchPage({
       SELECT lb.*, e.name as tank_name, e.slug as tank_slug
       FROM lobbying lb
       JOIN entities e ON lb.client_entity_id = e.id
-      WHERE lb.registrant_name LIKE ? OR lb.issue_description LIKE ? OR lb.client_name LIKE ?
+      WHERE (lb.registrant_name LIKE ? OR lb.issue_description LIKE ? OR lb.client_name LIKE ?) AND (lb.provenance IS NULL OR lb.provenance != 'seeded_demo')
       ORDER BY lb.amount DESC
       LIMIT 20
     `).all(`%${q}%`, `%${q}%`, `%${q}%`) as LobbyingRow[];
@@ -138,7 +138,7 @@ export default async function SearchPage({
       LEFT JOIN entities e_tgt ON il.target_id = e_tgt.id AND il.target_type IN ('think_tank','media_amplifier')
       LEFT JOIN legislation l_tgt ON il.target_id = l_tgt.id AND il.target_type = 'legislation'
       LEFT JOIN policy_papers pp_tgt ON il.target_id = pp_tgt.id AND il.target_type = 'policy_paper'
-      WHERE il.evidence LIKE ? OR il.link_type LIKE ?
+      WHERE (il.evidence LIKE ? OR il.link_type LIKE ?) AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
       ORDER BY il.strength DESC
       LIMIT 20
     `).all(`%${q}%`, `%${q}%`) as InfluenceLinkRow[];

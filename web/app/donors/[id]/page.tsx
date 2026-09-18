@@ -32,7 +32,7 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
   const db = getDb();
   
   // Find the specific donor row to get the donor name
-  const searchedDonor = db.prepare("SELECT * FROM donors WHERE id = ?").get(resolvedParams.id) as Donor | undefined;
+  const searchedDonor = db.prepare("SELECT * FROM donors WHERE id = ? AND (provenance IS NULL OR provenance != 'seeded_demo')").get(resolvedParams.id) as Donor | undefined;
   
   let donorNameMatch = "";
   if (searchedDonor) {
@@ -47,7 +47,7 @@ export default async function DonorProfile({ params }: { params: Promise<{ id: s
     SELECT d.*, e.name as tank_name, e.slug as tank_slug, e.lean
     FROM donors d
     JOIN entities e ON d.entity_id = e.id
-    WHERE d.donor_name = ?
+    WHERE d.donor_name = ? AND (d.provenance IS NULL OR d.provenance != 'seeded_demo')
     ORDER BY d.amount DESC
   `).all(donorNameMatch) as DonationRow[];
 

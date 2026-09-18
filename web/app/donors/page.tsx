@@ -18,6 +18,7 @@ export default async function DonorsPage() {
     SELECT d.*, e.name as tank_name, e.slug as tank_slug
     FROM donors d
     JOIN entities e ON d.entity_id = e.id
+    WHERE (d.provenance IS NULL OR d.provenance != 'seeded_demo')
     ORDER BY d.amount DESC
   `).all() as (Donor & { tank_name: string; tank_slug: string })[];
 

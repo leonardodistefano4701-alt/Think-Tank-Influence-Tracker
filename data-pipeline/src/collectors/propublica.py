@@ -46,8 +46,8 @@ def process_990_data(entity_id: str, data: Optional[Dict[str, Any]]) -> List[Fin
             fiscal_year=int(year),
             total_revenue=filing.get('totrevenue'),
             total_expenses=filing.get('totfuncexpns'),
-            net_assets=filing.get('totassetsend'),
-            executive_compensation=None, # Often requires deeper filing parse
+            net_assets=filing.get('totnetassetend'),
+            executive_compensation=filing.get('compnsatncurrofcr'),
             program_revenue=filing.get('totprgmrevnue'),
             contributions_and_grants=filing.get('totcntrbgfts'),
             investment_income=filing.get('invstmntinc'),
@@ -73,15 +73,28 @@ async def run_propublica_collector():
                     
                     for rec in records:
                         cur.execute('''
-                            INSERT OR IGNORE INTO financials 
+                            INSERT INTO financials 
                             (id, entity_id, fiscal_year, total_revenue, total_expenses, net_assets, 
-                            program_revenue, contributions_and_grants, investment_income, raw_990)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            executive_compensation, program_revenue, contributions_and_grants, investment_income, raw_990, provenance)
+                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ON CONFLICT(entity_id, fiscal_year) DO UPDATE SET
+                                total_revenue = excluded.total_revenue,
+                                total_expenses = excluded.total_expenses,
+                                net_assets = excluded.net_assets,
+                                executive_compensation = excluded.executive_compensation,
+                                program_revenue = excluded.program_revenue,
+                                contributions_and_grants = excluded.contributions_and_grants,
+                                investment_income = excluded.investment_income,
+                                raw_990 = excluded.raw_990,
+                                provenance = excluded.provenance
                         ''', (
                             rec.id, rec.entity_id, rec.fiscal_year, rec.total_revenue, 
-                            rec.total_expenses, rec.net_assets, rec.program_revenue, 
+                            rec.total_expenses, rec.net_assets, 
+                            str(rec.executive_compensation) if rec.executive_compensation is not None else None,
+                            rec.program_revenue, 
                             rec.contributions_and_grants, rec.investment_income, 
-                            json.dumps(rec.raw_990) if rec.raw_990 else None
+                            json.dumps(rec.raw_990) if rec.raw_990 else None,
+                            'verified_filing'
                         ))
                     conn.commit()
                     logger.info(f"Saved {len(records)} financial records for {name}")

@@ -7,10 +7,10 @@ from db import get_db
 SEED_ENTITIES = [
     {"name": "Heritage Foundation", "slug": "heritage-foundation", "type": "think_tank", "ein": "23-7327730", "lean": "Right"},
     {"name": "Brookings Institution", "slug": "brookings-institution", "type": "think_tank", "ein": "53-0196577", "lean": "Center"},
-    {"name": "Center for American Progress", "slug": "center-for-american-progress", "type": "think_tank", "ein": "20-1541158", "lean": "Left"},
+    {"name": "Center for American Progress", "slug": "center-for-american-progress", "type": "think_tank", "ein": "30-0126510", "lean": "Left"},
     {"name": "Cato Institute", "slug": "cato-institute", "type": "think_tank", "ein": "23-7432162", "lean": "Libertarian"},
     {"name": "Council on Foreign Relations", "slug": "council-on-foreign-relations", "type": "think_tank", "ein": "13-1628168", "lean": "Establishment"},
-    {"name": "Atlantic Council", "slug": "atlantic-council", "type": "think_tank", "ein": "52-1328663", "lean": "Bipartisan/Globalist"},
+    {"name": "Atlantic Council", "slug": "atlantic-council", "type": "think_tank", "ein": "52-0742294", "lean": "Bipartisan/Globalist"},
     {"name": "Ezra Klein", "slug": "ezra-klein", "type": "media_amplifier", "lean": "Left", "description": "Columnist/Podcaster"},
     {"name": "Hasan Piker", "slug": "hasan-piker", "type": "media_amplifier", "lean": "Left", "description": "Twitch Streamer"}
 ]

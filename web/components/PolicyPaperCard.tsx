@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ChevronDown, ChevronRight, ExternalLink } from "lucide-react";
+import ProvenanceBadge, { type Provenance } from "@/components/ProvenanceBadge";
 
 interface PolicyPaperCardProps {
   title: string;
@@ -9,6 +10,7 @@ interface PolicyPaperCardProps {
   publishedDate: string | null;
   topicTags: string | null;
   url: string | null;
+  provenance?: Provenance;
 }
 
 export default function PolicyPaperCard({
@@ -17,6 +19,7 @@ export default function PolicyPaperCard({
   publishedDate,
   topicTags,
   url,
+  provenance,
 }: PolicyPaperCardProps) {
   const [expanded, setExpanded] = useState(false);
   // Tags repeat within a row, so dedupe before using them as keys.
@@ -44,6 +47,7 @@ export default function PolicyPaperCard({
             {title}
           </span>
           <span className="mt-1 flex items-center flex-wrap gap-x-3 gap-y-1 text-xs text-muted">
+            <ProvenanceBadge provenance={provenance ?? "ai_generated"} />
             {publishedDate && <span className="tnum">{publishedDate}</span>}
             {tags.length > 0 && <span>{tags.join(" · ")}</span>}
           </span>

@@ -29,6 +29,7 @@ export default async function ExplorePage({
            SUM(CASE WHEN is_foreign_govt = 1 THEN amount ELSE 0 END) as foreign_amount,
            SUM(CASE WHEN is_foreign_govt = 1 THEN 1 ELSE 0 END) as foreign_count
     FROM donors 
+    WHERE (provenance IS NULL OR provenance != 'seeded_demo')
     GROUP BY entity_id
   `).all() as { entity_id: string; donor_count: number; total_amount: number; foreign_amount: number; foreign_count: number }[];
 
@@ -37,7 +38,7 @@ export default async function ExplorePage({
            l.title as leg_title, l.bill_id, l.status as leg_status
     FROM influence_links il
     LEFT JOIN legislation l ON il.target_id = l.id
-    WHERE il.source_type = 'think_tank' AND il.target_type = 'legislation'
+    WHERE il.source_type = 'think_tank' AND il.target_type = 'legislation' AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
     ORDER BY il.strength DESC
   `).all() as (InfluenceLink & { leg_title?: string; bill_id?: string; leg_status?: string })[];
 
@@ -46,6 +47,7 @@ export default async function ExplorePage({
     SELECT d.donor_name, d.amount, d.industry, d.is_foreign_govt, e.name as tank_name, e.slug as tank_slug
     FROM donors d
     JOIN entities e ON d.entity_id = e.id
+    WHERE (d.provenance IS NULL OR d.provenance != 'seeded_demo')
     ORDER BY d.amount DESC
     LIMIT 15
   `).all() as (Donor & { tank_name: string; tank_slug: string })[];

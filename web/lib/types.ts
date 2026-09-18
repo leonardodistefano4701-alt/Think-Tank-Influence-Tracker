@@ -1,3 +1,5 @@
+import type { Provenance } from "./rows";
+
 export interface Entity {
   id: string;
   name: string;
@@ -46,6 +48,7 @@ export interface Donor {
   industry: string | null;
   is_foreign_govt: number;
   metadata: string;
+  provenance?: Provenance;
 }
 
 export interface Legislation {
@@ -74,6 +77,7 @@ export interface InfluenceLink {
   strength: number | null;
   evidence: string | null;
   year: number | null;
+  provenance?: Provenance;
 }
 
 export interface Lobbying {
@@ -86,6 +90,7 @@ export interface Lobbying {
   amount: number | null;
   filing_year: number | null;
   filing_period: string | null;
+  provenance?: Provenance;
 }
 
 export interface PolicyPaper {
@@ -96,4 +101,5 @@ export interface PolicyPaper {
   published_date: string | null;
   topic_tags: string | null;
   summary: string | null;
+  provenance?: Provenance;
 }

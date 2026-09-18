@@ -53,9 +53,9 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
   if (!entity) return notFound();
 
   const financials = db.prepare("SELECT * FROM financials WHERE entity_id = ? ORDER BY fiscal_year ASC").all(entity.id) as Financial[];
-  const donors = db.prepare("SELECT * FROM donors WHERE entity_id = ? ORDER BY amount DESC").all(entity.id) as Donor[];
+  const donors = db.prepare("SELECT * FROM donors WHERE entity_id = ? AND (provenance IS NULL OR provenance != 'seeded_demo') ORDER BY amount DESC").all(entity.id) as Donor[];
   const policyPapers = db.prepare("SELECT * FROM policy_papers WHERE entity_id = ? ORDER BY published_date DESC").all(entity.id) as PolicyPaper[];
-  const lobbying = db.prepare("SELECT * FROM lobbying WHERE client_entity_id = ? ORDER BY filing_year DESC").all(entity.id) as Lobbying[];
+  const lobbying = db.prepare("SELECT * FROM lobbying WHERE client_entity_id = ? AND (provenance IS NULL OR provenance != 'seeded_demo') ORDER BY filing_year DESC").all(entity.id) as Lobbying[];
 
   const verdictRow = db.prepare("SELECT * FROM analysis_verdicts WHERE target_id = ?")
     .get(entity.id) as VerdictRow | undefined;
@@ -74,6 +74,7 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
     FROM influence_links il
     LEFT JOIN legislation l ON il.target_id = l.id
     WHERE il.source_id = ? AND il.source_type = 'think_tank'
+      AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
     ORDER BY il.strength DESC
   `).all(entity.id) as (InfluenceLink & { leg_title?: string; bill_id?: string; leg_status?: string })[];
 
@@ -174,6 +175,7 @@ export default async function ThinkTankProfile({ params }: { params: Promise<{ s
                 publishedDate={p.published_date}
                 topicTags={p.topic_tags}
                 url={p.url}
+                provenance={p.provenance}
               />
             ))}
           </div>

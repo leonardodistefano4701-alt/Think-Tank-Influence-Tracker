@@ -112,6 +112,7 @@ export default async function AnalysisPage() {
          FROM influence_links il
          JOIN legislation l ON il.target_id = l.id
         WHERE il.source_type = 'policy_paper'
+          AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
           AND il.source_id IN (
                 SELECT id FROM policy_papers WHERE entity_id IN (${THINK_TANK_IDS})
               )`
@@ -129,6 +130,8 @@ export default async function AnalysisPage() {
          JOIN donors d ON il.source_id = d.id
          JOIN policy_papers p ON il.target_id = p.id
         WHERE il.source_type = 'donor' AND il.target_type = 'policy_paper'
+          AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
+          AND (d.provenance IS NULL OR d.provenance != 'seeded_demo')
           AND p.entity_id IN (${THINK_TANK_IDS})`
     )
     .all() as DonorPaperLinkRow[];

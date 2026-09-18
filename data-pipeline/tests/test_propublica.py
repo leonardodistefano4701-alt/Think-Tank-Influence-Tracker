@@ -22,6 +22,8 @@ def test_process_990_data_valid():
                 "totrevenue": 1000,
                 "totfuncexpns": 800,
                 "totassetsend": 5000,
+                "totnetassetend": 4200,
+                "compnsatncurrofcr": 250,
                 "totprgmrevnue": 100,
                 "totcntrbgfts": 900,
                 "invstmntinc": 0
@@ -34,7 +36,8 @@ def test_process_990_data_valid():
     assert financials[0].fiscal_year == 2021
     assert financials[0].total_revenue == 1000
     assert financials[0].total_expenses == 800
-    assert financials[0].net_assets == 5000
+    assert financials[0].net_assets == 4200
+    assert financials[0].executive_compensation == 250
     assert financials[0].program_revenue == 100
     assert financials[0].contributions_and_grants == 900
     assert financials[0].investment_income == 0

@@ -58,6 +58,7 @@ export default async function GrantsPage() {
     SELECT d.donor_name, SUM(d.amount) as total_given, COUNT(DISTINCT d.entity_id) as tanks_funded,
            d.industry, MAX(d.year) as latest_year
     FROM donors d
+    WHERE (d.provenance IS NULL OR d.provenance != 'seeded_demo')
     GROUP BY d.donor_name
     ORDER BY total_given DESC
     LIMIT 15

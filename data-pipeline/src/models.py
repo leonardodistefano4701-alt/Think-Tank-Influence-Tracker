@@ -24,7 +24,7 @@ class FinancialModel(BaseModel):
     total_revenue: Optional[int] = None
     total_expenses: Optional[int] = None
     net_assets: Optional[int] = None
-    executive_compensation: Optional[List[Dict]] = None
+    executive_compensation: Optional[Any] = None
     program_revenue: Optional[int] = None
     contributions_and_grants: Optional[int] = None
     investment_income: Optional[int] = None

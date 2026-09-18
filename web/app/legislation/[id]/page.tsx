@@ -100,7 +100,7 @@ export default async function LegislationProfile({ params }: { params: Promise<{
     FROM influence_links il
     JOIN policy_papers pp ON il.source_id = pp.id
     JOIN entities e ON pp.entity_id = e.id
-    WHERE il.target_id = ? AND il.target_type = 'legislation' AND il.source_type = 'policy_paper'
+    WHERE il.target_id = ? AND il.target_type = 'legislation' AND il.source_type = 'policy_paper' AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
     ORDER BY il.strength DESC, pp.published_date DESC
   `).all(bill.id) as PaperLinkRow[];
 

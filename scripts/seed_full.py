@@ -168,44 +168,8 @@ LOBBYING = [
 ]
 
 # ── Policy Papers seed data ───────────────────────────────────────────────────
-POLICY_PAPERS = {
-    "heritage-foundation": [
-        {"title": "Mandate for Leadership: The Conservative Promise (Project 2025)", "url": "https://www.heritage.org/conservatism/commentary/project-2025",
-         "published_date": "2023-04-01", "topic_tags": "governance,deregulation,executive_power", "summary": "A 920-page blueprint to reshape the federal government in a potential second Trump administration. Covers agency restructuring, deregulation, and personnel overhauls across every cabinet department."},
-        {"title": "Unleashing American Energy: How to Lower Costs and Achieve Energy Dominance", "url": "https://www.heritage.org/energy-economics",
-         "published_date": "2023-01-15", "topic_tags": "energy,oil,gas,deregulation", "summary": "Policy brief arguing for expanded fossil fuel production on federal lands, repeal of IRA clean energy subsidies, and reduced EPA regulatory authority."},
-    ],
-    "brookings-institution": [
-        {"title": "Governing AI: A Blueprint for Federal Regulation", "url": "https://www.brookings.edu/research/governing-ai",
-         "published_date": "2023-01-10", "topic_tags": "technology,AI,regulation", "summary": "Framework proposing a sector-specific AI regulatory approach with a new federal coordination office. Cited by 3 Senate co-sponsors of S.2355."},
-        {"title": "The Qatar Connection: Foreign Funding and Think Tank Independence", "url": "https://www.brookings.edu/research/foreign-funding",
-         "published_date": "2022-08-12", "topic_tags": "transparency,foreign_funding,governance", "summary": "Internal review of foreign government funding disclosure policies following NYT investigation of Qatar's $14.8M contribution."},
-    ],
-    "center-for-american-progress": [
-        {"title": "The Climate Economy: Jobs, Investment, and American Competitiveness", "url": "https://www.americanprogress.org/article/climate-economy",
-         "published_date": "2022-05-20", "topic_tags": "climate,energy,jobs,IRA", "summary": "Analysis projecting 9 million new jobs from IRA clean energy investments. Provided analytical foundation for Biden administration's IRA messaging strategy."},
-        {"title": "Expanding Social Security for the 21st Century", "url": "https://www.americanprogress.org/article/social-security",
-         "published_date": "2023-03-15", "topic_tags": "social_security,retirement,labor", "summary": "Policy paper arguing that WEP/GPO elimination would restore fairness for 2.8 million public sector retirees, supporting S.2073."},
-    ],
-    "cato-institute": [
-        {"title": "The Fiscal Illusion of Social Security Expansion", "url": "https://www.cato.org/policy-analysis/social-security",
-         "published_date": "2023-06-01", "topic_tags": "social_security,fiscal_policy,entitlements", "summary": "Analysis arguing that S.2073 would accelerate Social Security's insolvency date by approximately 3 years, costing $150B over 10 years."},
-        {"title": "Koch Network Independence Audit: 2023 Assessment", "url": "https://www.cato.org/blog/independence",
-         "published_date": "2023-09-01", "topic_tags": "governance,independence,donors", "summary": "Cato's response to criticism of Koch influence, asserting editorial independence despite receiving $5M annually from Charles Koch Foundation."},
-    ],
-    "council-on-foreign-relations": [
-        {"title": "Technology Competition with China: A Strategic Framework", "url": "https://www.cfr.org/report/technology-china",
-         "published_date": "2023-02-15", "topic_tags": "technology,china,national_security,trade", "summary": "Report recommending expanded federal authority to restrict technology transfers to adversarial nations. Informed drafting of RESTRICT Act (S.686)."},
-        {"title": "The Carlyle Connection: Private Equity and Foreign Policy", "url": "https://www.cfr.org/backgrounder/private-equity",
-         "published_date": "2022-11-20", "topic_tags": "defense,private_equity,conflicts_of_interest", "summary": "Analysis of overlapping board memberships between CFR and defense-adjacent private equity firms, particularly Carlyle Group."},
-    ],
-    "atlantic-council": [
-        {"title": "NATO 2030+: Readiness, Resilience, and Interoperability", "url": "https://www.atlanticcouncil.org/programs/scowcroft-center",
-         "published_date": "2023-04-20", "topic_tags": "defense,NATO,military,alliances", "summary": "Scowcroft Center report cited in NDAA FY2024 conference report. Recommends 2.5% GDP defense spending floor for NATO allies."},
-        {"title": "Digital Sovereignty and Platform Governance", "url": "https://www.atlanticcouncil.org/programs/dfrlab",
-         "published_date": "2023-02-01", "topic_tags": "technology,social_media,disinformation", "summary": "DFRLab analysis of state-sponsored disinformation campaigns. Funded in part by Meta ($1M) and UAE government ($2.5M)."},
-    ],
-}
+# Removed per finding A4 in docs/AUDIT.md
+POLICY_PAPERS = {}
 
 
 def run_full_seed():

@@ -32,10 +32,10 @@ interface TankStats {
 }
 
 function getStats(db: ReturnType<typeof getDb>, entity: Entity): TankStats {
-  const donors = db.prepare("SELECT * FROM donors WHERE entity_id = ? ORDER BY amount DESC").all(entity.id) as DonationRow[];
-  const links = db.prepare("SELECT * FROM influence_links WHERE source_id = ? AND source_type = 'think_tank'").all(entity.id) as InfluenceLink[];
+  const donors = db.prepare("SELECT * FROM donors WHERE entity_id = ? AND (provenance IS NULL OR provenance != 'seeded_demo') ORDER BY amount DESC").all(entity.id) as DonationRow[];
+  const links = db.prepare("SELECT * FROM influence_links WHERE source_id = ? AND source_type = 'think_tank' AND (provenance IS NULL OR provenance NOT IN ('seeded_demo', 'ai_generated'))").all(entity.id) as InfluenceLink[];
   const paperCount = db.prepare("SELECT COUNT(*) as cnt FROM policy_papers WHERE entity_id = ?").get(entity.id) as { cnt: number };
-  const lobbyTotal = db.prepare("SELECT SUM(amount) as total FROM lobbying WHERE client_entity_id = ?").get(entity.id) as { total: number | null };
+  const lobbyTotal = db.prepare("SELECT SUM(amount) as total FROM lobbying WHERE client_entity_id = ? AND (provenance IS NULL OR provenance != 'seeded_demo')").get(entity.id) as { total: number | null };
   const latestFinancial = db.prepare("SELECT total_revenue FROM financials WHERE entity_id = ? ORDER BY fiscal_year DESC LIMIT 1").get(entity.id) as { total_revenue: number } | undefined;
 
   // Complex query to get actual legislation targeted by this think tank via its papers
@@ -44,7 +44,7 @@ function getStats(db: ReturnType<typeof getDb>, entity: Entity): TankStats {
     FROM influence_links il
     JOIN legislation l ON il.target_id = l.id
     JOIN policy_papers pp ON il.source_id = pp.id AND il.source_type = 'policy_paper'
-    WHERE pp.entity_id = ? AND il.target_type = 'legislation'
+    WHERE pp.entity_id = ? AND il.target_type = 'legislation' AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
     GROUP BY l.id
     ORDER BY il.strength DESC LIMIT 5
   `).all(entity.id) as LegislationLinkRow[];
