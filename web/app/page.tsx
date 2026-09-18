@@ -37,7 +37,7 @@ export default async function Home() {
               (SELECT COUNT(*)      FROM donors d WHERE d.entity_id = e.id AND (d.provenance IS NULL OR d.provenance != 'seeded_demo'))  AS donor_count,
               (SELECT COUNT(*)      FROM policy_papers p WHERE p.entity_id = e.id) AS paper_count,
               (SELECT COUNT(*) FROM influence_links il
-                 WHERE il.source_type = 'policy_paper' AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
+                 WHERE il.source_type = 'policy_paper' AND (il.provenance IS NULL OR il.provenance != 'seeded_demo')
                    AND il.source_id IN (SELECT id FROM policy_papers WHERE entity_id = e.id)) AS link_count
          FROM entities e
         WHERE e.type = 'think_tank'

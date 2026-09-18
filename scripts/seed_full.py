@@ -260,16 +260,23 @@ def run_full_seed():
             if not entity_id:
                 continue
             for d in donors:
+                donor_row = cur.execute(
+                    "SELECT id FROM donors WHERE entity_id = ? AND donor_name = ? AND year = ? LIMIT 1",
+                    (entity_id, d["donor_name"], d["year"])
+                ).fetchone()
+                donor_id = donor_row[0] if donor_row else None
+                if not donor_id:
+                    continue
                 # strength proportional to amount
                 max_donation = max(dd["amount"] for dd in donors)
                 strength = round(d["amount"] / max_donation, 2)
                 cur.execute("""
                     INSERT INTO influence_links
-                    (id, source_type, source_id, target_type, target_id, link_type, strength, evidence, year)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (uid(), "donor", uid(), "think_tank", entity_id, "funds", strength,
+                    (id, source_type, source_id, target_type, target_id, link_type, strength, evidence, year, provenance)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (uid(), "donor", donor_id, "think_tank", entity_id, "funds", strength,
                       f"{d['donor_name']} contributed ${d['amount']:,} to {slug.replace('-', ' ').title()} ({d['source']})",
-                      d["year"]))
+                      d["year"], "seeded_demo"))
 
         conn.commit()
         print("\n✅ Full seed complete!")

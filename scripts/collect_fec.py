@@ -1,3 +1,4 @@
+import re
 """
 FEC Data Collector — Uses data.gov API key to pull real campaign finance data.
 Queries:
@@ -97,8 +98,14 @@ def run():
             donor = dict(donor_row)
             name = donor['donor_name']
             
-            # Skip foreign government donors (they don't have PACs)
-            if any(x in name.lower() for x in ['qatar', 'emirates', 'nato', 'state department']):
+            # Skip foreign governments, foundations, philanthropic funds, and individuals
+            donor_lower = name.lower()
+            industry_lower = (donor.get('industry') or '').lower()
+            if any(x in donor_lower for x in ['qatar', 'emirates', 'nato', 'state department', 'foundation', 'fund', 'trust', 'society', 'endowment']):
+                continue
+            if any(x in industry_lower for x in ['philanthropy', 'dark money']):
+                continue
+            if name in ['Adrienne Arsht', 'Peter Thiel', 'George Soros / Open Society Foundations', 'Tom Steyer / NextGen America']:
                 continue
             
             search_name = name.split('/')[0].strip()  # Handle "George Soros / Open Society"
@@ -111,7 +118,22 @@ def run():
                 print(f"  ○ {name}: No PACs found")
                 continue
 
-            for pac in results[:2]:  # Store top 2 PACs per donor
+            for pac in results:
+                # Finding C8: only keep committees whose connected organization exactly matches the donor
+                connected_org = pac.get('connected_organization_name') or ''
+                pac_name = (pac.get('name') or '').upper()
+                norm_donor = search_name.strip().upper()
+
+                if connected_org:
+                    norm_conn = re.sub(r'[\s.,\-/]+', ' ', connected_org).strip().upper()
+                    norm_donor_clean = re.sub(r'[\s.,\-/]+', ' ', search_name).strip().upper()
+                    if norm_donor_clean != norm_conn and not norm_conn.startswith(norm_donor_clean):
+                        continue
+                else:
+                    # If connected_organization_name not in top-level payload, verify PAC name contains donor
+                    if norm_donor not in pac_name:
+                        continue
+
                 fec_id = pac.get('committee_id', '')
                 existing = cur.execute("SELECT id FROM fec_committees WHERE fec_id = ?", (fec_id,)).fetchone()
                 if existing:

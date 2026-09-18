@@ -44,7 +44,7 @@ function getStats(db: ReturnType<typeof getDb>, entity: Entity): TankStats {
     FROM influence_links il
     JOIN legislation l ON il.target_id = l.id
     JOIN policy_papers pp ON il.source_id = pp.id AND il.source_type = 'policy_paper'
-    WHERE pp.entity_id = ? AND il.target_type = 'legislation' AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
+    WHERE pp.entity_id = ? AND il.target_type = 'legislation' AND (il.provenance IS NULL OR il.provenance != 'seeded_demo')
     GROUP BY l.id
     ORDER BY il.strength DESC LIMIT 5
   `).all(entity.id) as LegislationLinkRow[];

@@ -1,3 +1,5 @@
+import re
+from difflib import SequenceMatcher
 """
 Perplexity AI Data Collector — Uses the Sonar Pro model to discover policy papers 
 and link them to legislation for each think tank.
@@ -67,37 +69,32 @@ Include at least 8 to 12 major papers with clear legislative connections. Do not
         print(f"  ✗ Error querying Perplexity for {tank_name}: {e}")
         return None
 
+TYPES = {
+    "HR": "HR", "S": "S", "HRES": "HRES", "SRES": "SRES",
+    "HJRES": "HJRES", "SJRES": "SJRES", "HCONRES": "HCONRES", "SCONRES": "SCONRES"
+}
+
+def parse_bill(raw: str):
+    s = re.sub(r"[\s.]", "", raw.upper())
+    m = re.fullmatch(r"(HCONRES|SCONRES|HJRES|SJRES|HRES|SRES|HR|S)(\d+)", s)
+    return (TYPES[m.group(1)], int(m.group(2))) if m else None
+
+def find_bill(cur, raw_id, claimed_title, congresses=(117, 118)):
+    key = parse_bill(raw_id)
+    if not key:
+        return None  # no FTS guessing, ever
+    btype, num = key
+    for c in congresses:
+        row = cur.execute(
+            "SELECT id, bill_id, title FROM legislation WHERE bill_id = ?",
+            (f"{c}-{btype}-{num}",)
+        ).fetchone()
+        if row and SequenceMatcher(None, claimed_title.lower(), row[2].lower()).ratio() >= 0.6:
+            return row
+    return None  # log as unmatched; do not link
+
 def find_bill_in_db(cur, raw_bill_id, bill_title):
-    """Try to find the bill in our database."""
-    # Normalize ID: "HR 2670" -> "HR-2670" or '%HR%2670%'
-    b_id = raw_bill_id.replace(' ', '').replace('.', '').upper()
-    if b_id.startswith('HR'): b_id = b_id.replace('HR', 'HR-')
-    elif b_id.startswith('S'): b_id = b_id.replace('S', 'S-')
-    elif b_id.startswith('HJRES'): b_id = b_id.replace('HJRES', 'HJRES-')
-    elif b_id.startswith('SJRES'): b_id = b_id.replace('SJRES', 'SJRES-')
-    
-    # Try exact-ish match on ID
-    rows = cur.execute("SELECT id, bill_id, title FROM legislation WHERE bill_id LIKE ?", (f'%{b_id}%',)).fetchall()
-    if rows:
-        return rows[0]
-        
-    # Try FTS5 on title
-    try:
-        # Sanitize query
-        q = bill_title.replace('"', '').replace("'", "")
-        fts_query = ' '.join([f'"{w}"*' for w in q.split() if len(w) > 3][:5])
-        rows = cur.execute('''
-            SELECT l.id, l.bill_id, l.title FROM legislation l
-            INNER JOIN search_legislation sl ON l.rowid = sl.rowid
-            WHERE search_legislation MATCH ?
-            ORDER BY sl.rank LIMIT 1
-        ''', (fts_query,)).fetchall()
-        if rows:
-            return rows[0]
-    except:
-        pass
-        
-    return None
+    return find_bill(cur, raw_bill_id, bill_title)
 
 def run():
     print("=" * 60)

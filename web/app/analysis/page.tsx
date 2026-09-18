@@ -53,7 +53,9 @@ interface TankAnalysis {
   lean: string | null;
   totalPapers: number;
   papersWithLegislation: number;
-  signedIntoLaw: number;
+  distinctBills: number;
+  standaloneLaws: number;
+  omnibusLaws: number;
   passedChamber: number;
   inCommittee: number;
   failed: number;
@@ -88,6 +90,8 @@ function groupBy<T>(rows: T[], key: (row: T) => string | null): Map<string, T[]>
   return out;
 }
 
+const OMNIBUS_RE = /national defense authorization|ndaa|appropriations/i;
+
 const THINK_TANK_IDS = "SELECT id FROM entities WHERE type = 'think_tank'";
 
 export default async function AnalysisPage() {
@@ -112,7 +116,7 @@ export default async function AnalysisPage() {
          FROM influence_links il
          JOIN legislation l ON il.target_id = l.id
         WHERE il.source_type = 'policy_paper'
-          AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
+          AND (il.provenance IS NULL OR il.provenance != 'seeded_demo')
           AND il.source_id IN (
                 SELECT id FROM policy_papers WHERE entity_id IN (${THINK_TANK_IDS})
               )`
@@ -147,26 +151,69 @@ export default async function AnalysisPage() {
   for (const tank of tanks) {
     const papers = papersByTank.get(tank.id) ?? [];
 
-    let signedIntoLaw = 0;
-    let passedChamber = 0;
-    let inCommittee = 0;
-    let failed = 0;
-    let opposed = 0;
     let papersWithLegislation = 0;
+
+    // Collect distinct bills linked across all papers of this think tank (Finding A2)
+    const billsMap = new Map<
+      string,
+      {
+        id: string;
+        bill_id: string | null;
+        title: string;
+        status: string | null;
+        isOmnibus: boolean;
+        opposed: boolean;
+      }
+    >();
 
     for (const paper of papers) {
       const links = legLinksByPaper.get(paper.id) ?? [];
       if (links.length > 0) papersWithLegislation++;
 
       for (const link of links) {
-        if (link.link_type === 'opposes') {
-          opposed++;
-        } else {
-          if (link.leg_status === 'Signed into Law') signedIntoLaw++;
-          else if (link.leg_status?.includes('Passed')) passedChamber++;
-          else if (link.leg_status === 'Failed') failed++;
-          else inCommittee++;
+        if (!link.leg_id) continue;
+        if (!billsMap.has(link.leg_id)) {
+          const isOmnibus = OMNIBUS_RE.test(link.leg_title ?? '') || OMNIBUS_RE.test(link.bill_id ?? '');
+          billsMap.set(link.leg_id, {
+            id: link.leg_id,
+            bill_id: link.bill_id,
+            title: link.leg_title ?? '',
+            status: link.leg_status,
+            isOmnibus,
+            opposed: link.link_type === 'opposes',
+          });
+        } else if (link.link_type === 'opposes') {
+          billsMap.get(link.leg_id)!.opposed = true;
         }
+      }
+    }
+
+    const distinctBillsList = Array.from(billsMap.values());
+    const distinctBills = distinctBillsList.length;
+
+    let standaloneLaws = 0;
+    let omnibusLaws = 0;
+    let passedChamber = 0;
+    let inCommittee = 0;
+    let failed = 0;
+    let opposed = 0;
+
+    for (const b of distinctBillsList) {
+      if (b.opposed) {
+        opposed++;
+      }
+      if (b.status === 'Signed into Law') {
+        if (b.isOmnibus) {
+          omnibusLaws++;
+        } else {
+          standaloneLaws++;
+        }
+      } else if (b.status?.includes('Passed')) {
+        passedChamber++;
+      } else if (b.status === 'Failed') {
+        failed++;
+      } else if (!b.opposed) {
+        inCommittee++;
       }
     }
 
@@ -233,10 +280,11 @@ export default async function AnalysisPage() {
       }
     }
 
-    // Calculate success rates
-    const totalAdvocated = signedIntoLaw + passedChamber + inCommittee + failed;
-    const successRate = totalAdvocated > 0 ? (signedIntoLaw / totalAdvocated) * 100 : 0;
-    const advancementRate = totalAdvocated > 0 ? ((signedIntoLaw + passedChamber) / totalAdvocated) * 100 : 0;
+    // Calculate success rates based on distinct bills
+    const totalAdvocated = distinctBills;
+    const totalLaws = standaloneLaws + omnibusLaws;
+    const successRate = totalAdvocated > 0 ? (totalLaws / totalAdvocated) * 100 : 0;
+    const advancementRate = totalAdvocated > 0 ? ((totalLaws + passedChamber) / totalAdvocated) * 100 : 0;
     const discoveryCoverage = papers.length > 0 ? (papersWithLegislation / papers.length) * 100 : 0;
 
     tankAnalyses.push({
@@ -245,7 +293,9 @@ export default async function AnalysisPage() {
       lean: tank.lean,
       totalPapers: papers.length,
       papersWithLegislation,
-      signedIntoLaw,
+      distinctBills,
+      standaloneLaws,
+      omnibusLaws,
       passedChamber,
       inCommittee,
       failed,
@@ -271,11 +321,11 @@ export default async function AnalysisPage() {
           Influence analysis
         </h1>
         <p className="mt-2 text-base text-muted max-w-2xl leading-relaxed">How often each organization&apos;s policy papers are linked to bills that later became law. A link is a recorded association, not a demonstrated cause.</p>
-        <div className="mt-4"><ProvenanceBanner kinds={["seeded_demo", "ai_generated"]}>
-          This scorecard is built on hand-authored donor rows and model-asserted influence links.
-          Bill statuses are verified against GovInfo, but a &quot;success rate&quot; here only counts
-          bills that a link row already connects to a think tank — it is not evidence that any
-          organization caused any bill to pass.
+        <div className="mt-4"><ProvenanceBanner kinds={["ai_generated"]}>
+          This scorecard counts distinct legislation linked to think tank policy papers.
+          Bill statuses are verified against GovInfo BILLSTATUS, with must-pass omnibus vehicles
+          (NDAAs and consolidated appropriations) reported separately from standalone legislation.
+          A recorded link is an association, not causal proof that an organization passed a bill.
         </ProvenanceBanner></div>
       </header>
 
@@ -291,10 +341,13 @@ export default async function AnalysisPage() {
                 <th className="text-left py-3 px-4">Think Tank</th>
                 <th className="text-center py-3 px-2">Lean</th>
                 <th className="text-center py-3 px-2">Papers</th>
-                <th className="text-center py-3 px-2">With Legislation</th>
+                <th className="text-center py-3 px-2">Distinct Bills</th>
                 <th className="text-center py-3 px-2">Coverage</th>
                 <th className="text-center py-3 px-2">
-                  <span className="flex items-center justify-center gap-1"><CheckCircle className="w-3.5 h-3.5 text-enacted"/>Laws</span>
+                  <span className="flex items-center justify-center gap-1" title="Distinct non-omnibus bills signed into law"><CheckCircle className="w-3.5 h-3.5 text-enacted"/>Standalone Laws</span>
+                </th>
+                <th className="text-center py-3 px-2">
+                  <span className="flex items-center justify-center gap-1 text-xs text-muted" title="Must-pass defense authorization (NDAA) and consolidated appropriations bills"><Scale className="w-3.5 h-3.5 text-muted"/>NDAA / Approp.</span>
                 </th>
                 <th className="text-center py-3 px-2">
                   <span className="flex items-center justify-center gap-1"><TrendingUp className="w-3.5 h-3.5 text-progress"/>Passed</span>
@@ -323,13 +376,14 @@ export default async function AnalysisPage() {
                     <span className="px-2 py-0.5 text-xs rounded-full bg-surface-sunken text-muted">{t.lean}</span>
                   </td>
                   <td className="text-center py-4 px-2 font-semibold">{t.totalPapers}</td>
-                  <td className="text-center py-4 px-2 font-semibold">{t.papersWithLegislation}</td>
+                  <td className="text-center py-4 px-2 font-semibold">{t.distinctBills}</td>
                   <td className="text-center py-4 px-2">
                     <span className={`font-semibold text-sm ${t.discoveryCoverage >= 50 ? 'text-enacted' : 'text-muted'}`}>
                       {Math.round(t.discoveryCoverage)}%
                     </span>
                   </td>
-                  <td className="text-center py-4 px-2 font-bold text-enacted">{t.signedIntoLaw}</td>
+                  <td className="text-center py-4 px-2 font-bold text-enacted">{t.standaloneLaws}</td>
+                  <td className="text-center py-4 px-2 font-semibold text-muted">{t.omnibusLaws}</td>
                   <td className="text-center py-4 px-2 font-bold text-progress">{t.passedChamber}</td>
                   <td className="text-center py-4 px-2 text-muted">{t.inCommittee}</td>
                   <td className="text-center py-4 px-2 text-failed font-semibold">{t.failed}</td>
@@ -348,9 +402,12 @@ export default async function AnalysisPage() {
             </tbody>
           </table>
         </div>
-        <div className="mt-4 text-xs text-muted flex gap-6">
+        <div className="mt-4 text-xs text-muted flex flex-wrap gap-x-6 gap-y-2">
+          <span><strong>Distinct Bills</strong> = Unique legislation records linked across all papers</span>
           <span><strong>Coverage</strong> = Papers mapped to bills / Total Papers</span>
-          <span><strong>Advancement Rate</strong> = (Laws + Passed) / Total Tracked Bills</span>
+          <span><strong>Standalone Laws</strong> = Distinct enacted non-omnibus policy bills</span>
+          <span><strong>NDAA / Approp.</strong> = Must-pass defense authorization and appropriations bills</span>
+          <span><strong>Advancement Rate</strong> = (Standalone Laws + NDAA/Approp + Passed) / Distinct Bills</span>
         </div>
       </div>
 

@@ -138,7 +138,7 @@ export default async function SearchPage({
       LEFT JOIN entities e_tgt ON il.target_id = e_tgt.id AND il.target_type IN ('think_tank','media_amplifier')
       LEFT JOIN legislation l_tgt ON il.target_id = l_tgt.id AND il.target_type = 'legislation'
       LEFT JOIN policy_papers pp_tgt ON il.target_id = pp_tgt.id AND il.target_type = 'policy_paper'
-      WHERE (il.evidence LIKE ? OR il.link_type LIKE ?) AND (il.provenance IS NULL OR il.provenance NOT IN ('seeded_demo', 'ai_generated'))
+      WHERE (il.evidence LIKE ? OR il.link_type LIKE ?) AND (il.provenance IS NULL OR il.provenance != 'seeded_demo')
       ORDER BY il.strength DESC
       LIMIT 20
     `).all(`%${q}%`, `%${q}%`) as InfluenceLinkRow[];
